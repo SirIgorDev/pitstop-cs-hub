@@ -11,6 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppGargalosRouteImport } from './routes/_app.gargalos'
+import { Route as AppNeoRegistrosRouteImport } from './routes/_app.neo.registros'
+import { Route as AppNeoDashboardRouteImport } from './routes/_app.neo.dashboard'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -21,30 +25,67 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGargalosRoute = AppGargalosRouteImport.update({
+  id: '/gargalos',
+  path: '/gargalos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNeoRegistrosRoute = AppNeoRegistrosRouteImport.update({
+  id: '/neo/registros',
+  path: '/neo/registros',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNeoDashboardRoute = AppNeoDashboardRouteImport.update({
+  id: '/neo/dashboard',
+  path: '/neo/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AppRoute
+  '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/gargalos': typeof AppGargalosRoute
+  '/neo/dashboard': typeof AppNeoDashboardRoute
+  '/neo/registros': typeof AppNeoRegistrosRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof AppRoute
   '/login': typeof LoginRoute
+  '/gargalos': typeof AppGargalosRoute
+  '/': typeof AppIndexRoute
+  '/neo/dashboard': typeof AppNeoDashboardRoute
+  '/neo/registros': typeof AppNeoRegistrosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_app': typeof AppRoute
+  '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/gargalos': typeof AppGargalosRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/neo/dashboard': typeof AppNeoDashboardRoute
+  '/_app/neo/registros': typeof AppNeoRegistrosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login'
+  fullPaths: '/' | '/login' | '/gargalos' | '/neo/dashboard' | '/neo/registros'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login'
-  id: '__root__' | '/_app' | '/login'
+  to: '/login' | '/gargalos' | '/' | '/neo/dashboard' | '/neo/registros'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/login'
+    | '/_app/gargalos'
+    | '/_app/'
+    | '/_app/neo/dashboard'
+    | '/_app/neo/registros'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AppRoute: typeof AppRoute
+  AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
 }
 
@@ -64,11 +105,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/': {
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/gargalos': {
+      id: '/_app/gargalos'
+      path: '/gargalos'
+      fullPath: '/gargalos'
+      preLoaderRoute: typeof AppGargalosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/neo/registros': {
+      id: '/_app/neo/registros'
+      path: '/neo/registros'
+      fullPath: '/neo/registros'
+      preLoaderRoute: typeof AppNeoRegistrosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/neo/dashboard': {
+      id: '/_app/neo/dashboard'
+      path: '/neo/dashboard'
+      fullPath: '/neo/dashboard'
+      preLoaderRoute: typeof AppNeoDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppGargalosRoute: typeof AppGargalosRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppNeoDashboardRoute: typeof AppNeoDashboardRoute
+  AppNeoRegistrosRoute: typeof AppNeoRegistrosRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppGargalosRoute: AppGargalosRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppNeoDashboardRoute: AppNeoDashboardRoute,
+  AppNeoRegistrosRoute: AppNeoRegistrosRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  AppRoute: AppRoute,
+  AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
