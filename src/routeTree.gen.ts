@@ -13,6 +13,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppGargalosRouteImport } from './routes/_app.gargalos'
+import { Route as AppAuditoriaRouteImport } from './routes/_app.auditoria'
+import { Route as AppAdministracaoRouteImport } from './routes/_app.administracao'
 import { Route as AppNeoRegistrosRouteImport } from './routes/_app.neo.registros'
 import { Route as AppNeoDashboardRouteImport } from './routes/_app.neo.dashboard'
 
@@ -35,6 +37,16 @@ const AppGargalosRoute = AppGargalosRouteImport.update({
   path: '/gargalos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAuditoriaRoute = AppAuditoriaRouteImport.update({
+  id: '/auditoria',
+  path: '/auditoria',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdministracaoRoute = AppAdministracaoRouteImport.update({
+  id: '/administracao',
+  path: '/administracao',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppNeoRegistrosRoute = AppNeoRegistrosRouteImport.update({
   id: '/neo/registros',
   path: '/neo/registros',
@@ -49,12 +61,16 @@ const AppNeoDashboardRoute = AppNeoDashboardRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/administracao': typeof AppAdministracaoRoute
+  '/auditoria': typeof AppAuditoriaRoute
   '/gargalos': typeof AppGargalosRoute
   '/neo/dashboard': typeof AppNeoDashboardRoute
   '/neo/registros': typeof AppNeoRegistrosRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/administracao': typeof AppAdministracaoRoute
+  '/auditoria': typeof AppAuditoriaRoute
   '/gargalos': typeof AppGargalosRoute
   '/': typeof AppIndexRoute
   '/neo/dashboard': typeof AppNeoDashboardRoute
@@ -64,6 +80,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/administracao': typeof AppAdministracaoRoute
+  '/_app/auditoria': typeof AppAuditoriaRoute
   '/_app/gargalos': typeof AppGargalosRoute
   '/_app/': typeof AppIndexRoute
   '/_app/neo/dashboard': typeof AppNeoDashboardRoute
@@ -71,13 +89,29 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/gargalos' | '/neo/dashboard' | '/neo/registros'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/administracao'
+    | '/auditoria'
+    | '/gargalos'
+    | '/neo/dashboard'
+    | '/neo/registros'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/gargalos' | '/' | '/neo/dashboard' | '/neo/registros'
+  to:
+    | '/login'
+    | '/administracao'
+    | '/auditoria'
+    | '/gargalos'
+    | '/'
+    | '/neo/dashboard'
+    | '/neo/registros'
   id:
     | '__root__'
     | '/_app'
     | '/login'
+    | '/_app/administracao'
+    | '/_app/auditoria'
     | '/_app/gargalos'
     | '/_app/'
     | '/_app/neo/dashboard'
@@ -119,6 +153,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppGargalosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/auditoria': {
+      id: '/_app/auditoria'
+      path: '/auditoria'
+      fullPath: '/auditoria'
+      preLoaderRoute: typeof AppAuditoriaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administracao': {
+      id: '/_app/administracao'
+      path: '/administracao'
+      fullPath: '/administracao'
+      preLoaderRoute: typeof AppAdministracaoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/neo/registros': {
       id: '/_app/neo/registros'
       path: '/neo/registros'
@@ -137,6 +185,8 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAdministracaoRoute: typeof AppAdministracaoRoute
+  AppAuditoriaRoute: typeof AppAuditoriaRoute
   AppGargalosRoute: typeof AppGargalosRoute
   AppIndexRoute: typeof AppIndexRoute
   AppNeoDashboardRoute: typeof AppNeoDashboardRoute
@@ -144,6 +194,8 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdministracaoRoute: AppAdministracaoRoute,
+  AppAuditoriaRoute: AppAuditoriaRoute,
   AppGargalosRoute: AppGargalosRoute,
   AppIndexRoute: AppIndexRoute,
   AppNeoDashboardRoute: AppNeoDashboardRoute,
