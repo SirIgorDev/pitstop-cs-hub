@@ -9,61 +9,205 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppGargalosRouteImport } from './routes/_app.gargalos'
+import { Route as AppAuditoriaRouteImport } from './routes/_app.auditoria'
+import { Route as AppAdministracaoRouteImport } from './routes/_app.administracao'
+import { Route as AppNeoRegistrosRouteImport } from './routes/_app.neo.registros'
+import { Route as AppNeoDashboardRouteImport } from './routes/_app.neo.dashboard'
 
-const IndexRoute = IndexRouteImport.update({
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGargalosRoute = AppGargalosRouteImport.update({
+  id: '/gargalos',
+  path: '/gargalos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuditoriaRoute = AppAuditoriaRouteImport.update({
+  id: '/auditoria',
+  path: '/auditoria',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdministracaoRoute = AppAdministracaoRouteImport.update({
+  id: '/administracao',
+  path: '/administracao',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNeoRegistrosRoute = AppNeoRegistrosRouteImport.update({
+  id: '/neo/registros',
+  path: '/neo/registros',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNeoDashboardRoute = AppNeoDashboardRouteImport.update({
+  id: '/neo/dashboard',
+  path: '/neo/dashboard',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
+  '/login': typeof LoginRoute
+  '/administracao': typeof AppAdministracaoRoute
+  '/auditoria': typeof AppAuditoriaRoute
+  '/gargalos': typeof AppGargalosRoute
+  '/neo/dashboard': typeof AppNeoDashboardRoute
+  '/neo/registros': typeof AppNeoRegistrosRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/administracao': typeof AppAdministracaoRoute
+  '/auditoria': typeof AppAuditoriaRoute
+  '/gargalos': typeof AppGargalosRoute
+  '/': typeof AppIndexRoute
+  '/neo/dashboard': typeof AppNeoDashboardRoute
+  '/neo/registros': typeof AppNeoRegistrosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_app/administracao': typeof AppAdministracaoRoute
+  '/_app/auditoria': typeof AppAuditoriaRoute
+  '/_app/gargalos': typeof AppGargalosRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/neo/dashboard': typeof AppNeoDashboardRoute
+  '/_app/neo/registros': typeof AppNeoRegistrosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/administracao'
+    | '/auditoria'
+    | '/gargalos'
+    | '/neo/dashboard'
+    | '/neo/registros'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/login'
+    | '/administracao'
+    | '/auditoria'
+    | '/gargalos'
+    | '/'
+    | '/neo/dashboard'
+    | '/neo/registros'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/login'
+    | '/_app/administracao'
+    | '/_app/auditoria'
+    | '/_app/gargalos'
+    | '/_app/'
+    | '/_app/neo/dashboard'
+    | '/_app/neo/registros'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/gargalos': {
+      id: '/_app/gargalos'
+      path: '/gargalos'
+      fullPath: '/gargalos'
+      preLoaderRoute: typeof AppGargalosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/auditoria': {
+      id: '/_app/auditoria'
+      path: '/auditoria'
+      fullPath: '/auditoria'
+      preLoaderRoute: typeof AppAuditoriaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administracao': {
+      id: '/_app/administracao'
+      path: '/administracao'
+      fullPath: '/administracao'
+      preLoaderRoute: typeof AppAdministracaoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/neo/registros': {
+      id: '/_app/neo/registros'
+      path: '/neo/registros'
+      fullPath: '/neo/registros'
+      preLoaderRoute: typeof AppNeoRegistrosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/neo/dashboard': {
+      id: '/_app/neo/dashboard'
+      path: '/neo/dashboard'
+      fullPath: '/neo/dashboard'
+      preLoaderRoute: typeof AppNeoDashboardRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppAdministracaoRoute: typeof AppAdministracaoRoute
+  AppAuditoriaRoute: typeof AppAuditoriaRoute
+  AppGargalosRoute: typeof AppGargalosRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppNeoDashboardRoute: typeof AppNeoDashboardRoute
+  AppNeoRegistrosRoute: typeof AppNeoRegistrosRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAdministracaoRoute: AppAdministracaoRoute,
+  AppAuditoriaRoute: AppAuditoriaRoute,
+  AppGargalosRoute: AppGargalosRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppNeoDashboardRoute: AppNeoDashboardRoute,
+  AppNeoRegistrosRoute: AppNeoRegistrosRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
