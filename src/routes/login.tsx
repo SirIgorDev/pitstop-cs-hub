@@ -1,10 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/mock-role";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -18,24 +21,57 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { session, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && session) navigate({ to: "/" });
+  }, [loading, session, navigate]);
+
+  const [tab, setTab] = useState<"entrar" | "cadastrar">("entrar");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [nome, setNome] = useState("");
   const [mostrar, setMostrar] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setEnviando(true);
-    // Autenticação será implementada na próxima etapa.
-    setTimeout(() => {
-      setEnviando(false);
-      navigate({ to: "/" });
-    }, 600);
+    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+    setEnviando(false);
+    if (error) {
+      toast.error("Não foi possível entrar", { description: error.message });
+      return;
+    }
+    toast.success("Bem-vindo(a) ao PitStop CS");
+    navigate({ to: "/" });
+  };
+
+  const handleSignup = async (e: FormEvent) => {
+    e.preventDefault();
+    setEnviando(true);
+    const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
+    const { error } = await supabase.auth.signUp({
+      email,
+      password: senha,
+      options: {
+        emailRedirectTo: redirectTo,
+        data: { nome },
+      },
+    });
+    setEnviando(false);
+    if (error) {
+      toast.error("Não foi possível cadastrar", { description: error.message });
+      return;
+    }
+    toast.success("Conta criada", {
+      description: "Você já pode acessar o sistema.",
+    });
+    navigate({ to: "/" });
   };
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
-      {/* Painel de marca */}
       <aside className="relative hidden flex-col justify-between bg-primary p-12 text-primary-foreground lg:flex">
         <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-md bg-primary-foreground text-primary font-bold">
@@ -50,9 +86,7 @@ function LoginPage() {
         </div>
 
         <div className="max-w-md">
-          <h2 className="text-3xl font-semibold leading-tight">
-            PitStop CS
-          </h2>
+          <h2 className="text-3xl font-semibold leading-tight">PitStop CS</h2>
           <p className="mt-3 text-sm leading-relaxed opacity-90">
             Centralize registros de gargalos e atendimentos Neo, acompanhe indicadores
             em tempo real e reduza o trabalho manual do time de Customer Success.
@@ -69,7 +103,6 @@ function LoginPage() {
         />
       </aside>
 
-      {/* Formulário */}
       <section className="flex items-center justify-center bg-background p-6">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
@@ -82,75 +115,123 @@ function LoginPage() {
             </div>
           </div>
 
-          <h1 className="text-2xl font-semibold text-foreground">Entrar na sua conta</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Acesse o PitStop CS</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Acesse com o e-mail corporativo da Fortes Tecnologia.
+            Use seu e-mail corporativo da Fortes Tecnologia.
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">E-mail corporativo</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="nome.sobrenome@fortestecnologia.com.br"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "entrar" | "cadastrar")} className="mt-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="entrar">Entrar</TabsTrigger>
+              <TabsTrigger value="cadastrar">Cadastrar</TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="senha">Senha</Label>
-                <button
-                  type="button"
-                  className="text-xs text-primary hover:text-primary-dark hover:underline"
+            <TabsContent value="entrar">
+              <form onSubmit={handleLogin} className="mt-6 space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">E-mail corporativo</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="nome.sobrenome@fortestecnologia.com.br"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="senha">Senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="senha"
+                      type={mostrar ? "text" : "password"}
+                      autoComplete="current-password"
+                      placeholder="••••••••"
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMostrar((v) => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                      aria-label={mostrar ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {mostrar ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary-dark"
+                  disabled={enviando}
                 >
-                  Esqueci minha senha
-                </button>
-              </div>
-              <div className="relative">
-                <Input
-                  id="senha"
-                  type={mostrar ? "text" : "password"}
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setMostrar((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
-                  aria-label={mostrar ? "Ocultar senha" : "Mostrar senha"}
+                  {enviando ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando…</>
+                  ) : (
+                    "Entrar"
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="cadastrar">
+              <form onSubmit={handleSignup} className="mt-6 space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="nome">Nome completo</Label>
+                  <Input
+                    id="nome"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Seu nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email-cad">E-mail corporativo</Label>
+                  <Input
+                    id="email-cad"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="nome.sobrenome@fortestecnologia.com.br"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="senha-cad">Senha</Label>
+                  <Input
+                    id="senha-cad"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="Mínimo de 8 caracteres"
+                    minLength={8}
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    O acesso inicia como Analista. Um administrador pode alterar o perfil depois.
+                  </p>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary-dark"
+                  disabled={enviando}
                 >
-                  {mostrar ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Checkbox id="lembrar" />
-              <span>Manter conectado neste dispositivo</span>
-            </label>
-
-            <Button
-              type="submit"
-              className="w-full bg-primary text-primary-foreground hover:bg-primary-dark"
-              disabled={enviando}
-            >
-              {enviando ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando…
-                </>
-              ) : (
-                "Entrar"
-              )}
-            </Button>
-          </form>
+                  {enviando ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cadastrando…</>
+                  ) : (
+                    "Criar conta"
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
 
           <p className="mt-8 text-center text-xs text-muted-foreground">
             Ao entrar, você concorda com as políticas internas de uso do sistema.

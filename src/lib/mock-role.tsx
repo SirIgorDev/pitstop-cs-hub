@@ -1,54 +1,127 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+// Contexto de autenticação real (mantém o nome do módulo para compatibilidade
+// com os imports existentes: `useMockRole`, `ROLE_LABEL`, `Role`, `MockRoleProvider`).
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Session } from "@supabase/supabase-js";
 
+export type DbRole = "analyst" | "coordinator" | "admin";
 export type Role = "analista" | "coordenador" | "administrador";
 
-export interface MockUser {
+const DB_TO_UI: Record<DbRole, Role> = {
+  analyst: "analista",
+  coordinator: "coordenador",
+  admin: "administrador",
+};
+
+export interface AuthUser {
+  id: string;
   nome: string;
   email: string;
   role: Role;
+  ativo: boolean;
 }
-
-const USERS: Record<Role, MockUser> = {
-  analista: { nome: "Marina Alves", email: "marina.alves@fortestecnologia.com.br", role: "analista" },
-  coordenador: { nome: "Rafael Cordeiro", email: "rafael.cordeiro@fortestecnologia.com.br", role: "coordenador" },
-  administrador: { nome: "Juliana Prado", email: "juliana.prado@fortestecnologia.com.br", role: "administrador" },
-};
-
-const STORAGE_KEY = "pitstop.mock.role";
 
 interface Ctx {
-  user: MockUser;
+  user: AuthUser;
   role: Role;
-  setRole: (r: Role) => void;
+  session: Session | null;
+  loading: boolean;
+  signOut: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
-const RoleContext = createContext<Ctx | null>(null);
+const AuthContext = createContext<Ctx | null>(null);
+
+const FALLBACK_USER: AuthUser = {
+  id: "",
+  nome: "Convidado",
+  email: "",
+  role: "analista",
+  ativo: false,
+};
 
 export function MockRoleProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<Role>("analista");
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const saved = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-    if (saved === "analista" || saved === "coordenador" || saved === "administrador") {
-      setRoleState(saved);
+  const loadProfile = async (uid: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, nome, email, role, ativo")
+      .eq("id", uid)
+      .maybeSingle();
+    if (error || !data) {
+      setProfile(null);
+      return;
     }
-  }, []);
-
-  const setRole = (r: Role) => {
-    setRoleState(r);
-    if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, r);
+    setProfile({
+      id: data.id,
+      nome: data.nome,
+      email: data.email,
+      role: DB_TO_UI[data.role as DbRole] ?? "analista",
+      ativo: data.ativo,
+    });
   };
 
-  const value = useMemo<Ctx>(() => ({ role, setRole, user: USERS[role] }), [role]);
+  useEffect(() => {
+    // 1) listener primeiro
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, s) => {
+      setSession(s);
+      if (s?.user) {
+        // adiar chamada para evitar deadlock
+        setTimeout(() => void loadProfile(s.user.id), 0);
+      } else {
+        setProfile(null);
+      }
+    });
 
-  return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;
+    // 2) sessão inicial
+    supabase.auth.getSession().then(async ({ data }) => {
+      setSession(data.session);
+      if (data.session?.user) {
+        await loadProfile(data.session.user.id);
+      }
+      setLoading(false);
+    });
+
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setProfile(null);
+    setSession(null);
+  };
+
+  const refresh = async () => {
+    if (session?.user) await loadProfile(session.user.id);
+  };
+
+  const user = profile ?? FALLBACK_USER;
+
+  const value = useMemo<Ctx>(
+    () => ({ user, role: user.role, session, loading, signOut, refresh }),
+    [user, session, loading],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useMockRole() {
-  const ctx = useContext(RoleContext);
-  if (!ctx) throw new Error("useMockRole must be used within MockRoleProvider");
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useMockRole/useAuth must be used within MockRoleProvider");
   return ctx;
 }
+
+export const useAuth = useMockRole;
 
 export const ROLE_LABEL: Record<Role, string> = {
   analista: "Analista de CS",

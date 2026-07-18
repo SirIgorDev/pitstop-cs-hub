@@ -9,14 +9,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { ROLE_LABEL, useMockRole, type Role } from "@/lib/mock-role";
+import { ROLE_LABEL, useAuth } from "@/lib/mock-role";
+import { toast } from "sonner";
 
 export function AppHeader() {
-  const { user, role, setRole } = useMockRole();
+  const { user, role, signOut } = useAuth();
   const navigate = useNavigate();
 
   const initials = user.nome
@@ -26,21 +25,25 @@ export function AppHeader() {
     .join("")
     .toUpperCase();
 
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Sessão encerrada");
+    navigate({ to: "/login" });
+  };
+
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4">
       <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
       <Separator orientation="vertical" className="h-6" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm text-muted-foreground">
-          Bem-vindo(a) de volta, <span className="font-medium text-foreground">{user.nome.split(" ")[0]}</span>
+          Bem-vindo(a) de volta,{" "}
+          <span className="font-medium text-foreground">{user.nome.split(" ")[0]}</span>
         </p>
       </div>
 
-      <Badge
-        variant="outline"
-        className="hidden border-border bg-muted text-muted-foreground sm:inline-flex"
-      >
-        Perfil simulado
+      <Badge variant="outline" className="hidden border-border bg-muted text-muted-foreground sm:inline-flex">
+        {ROLE_LABEL[role]}
       </Badge>
 
       <DropdownMenu>
@@ -60,21 +63,12 @@ export function AppHeader() {
             <div className="text-xs font-normal text-muted-foreground">{user.email}</div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-            Alternar perfil (demo)
-          </DropdownMenuLabel>
-          <DropdownMenuRadioGroup value={role} onValueChange={(v) => setRole(v as Role)}>
-            <DropdownMenuRadioItem value="analista">Analista de CS</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="coordenador">Coordenador</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="administrador">Administrador</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>
+          <DropdownMenuItem disabled>
             <UserIcon className="mr-2 h-4 w-4" /> Meu perfil
           </DropdownMenuItem>
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
-            onClick={() => navigate({ to: "/login" })}
+            onClick={() => void handleSignOut()}
           >
             <LogOut className="mr-2 h-4 w-4" /> Sair
           </DropdownMenuItem>
