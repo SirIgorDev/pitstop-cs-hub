@@ -23,7 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  CATEGORIAS_GARGALO,
   IMPACTOS,
   RISCOS_CHURN,
   SEGMENTOS_GARGALO,
@@ -88,11 +87,32 @@ export function GargaloForm({ open, onOpenChange, initial }: Props) {
 
   const pitstopQ = useQuery({
     queryKey: ["pitstop_options"],
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pitstop_options")
         .select("id, nome, ativo, ordem")
         .eq("ativo", true)
+        .is("deleted_at", null)
+        .order("ordem");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const categoriesQ = useQuery({
+    queryKey: ["categoria_gargalo_options"],
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categoria_gargalo_options")
+        .select("id, nome, ativo, ordem")
+        .eq("ativo", true)
+        .is("deleted_at", null)
         .order("ordem");
       if (error) throw error;
       return data;
@@ -115,8 +135,9 @@ export function GargaloForm({ open, onOpenChange, initial }: Props) {
 
   const mutation = useMutation({
     mutationFn: async (payload: Gargalo) => {
-      // Envie apenas colunas editáveis. O objeto de edição também contém
-      // campos calculados pelo banco, que não podem ser atualizados.
+      // Monte explicitamente apenas as colunas editáveis. O objeto recebido ao
+      // editar também pode conter campos retornados pela consulta, como
+      // tempo_resolucao_dias, que é gerado pelo banco e não aceita UPDATE.
       const next: Gargalo = {
         data_registro: payload.data_registro,
         cliente: payload.cliente,
@@ -237,7 +258,15 @@ export function GargaloForm({ open, onOpenChange, initial }: Props) {
             <SimpleSelect
               value={form.categoria}
               onChange={(v) => setForm({ ...form, categoria: v })}
-              options={[...CATEGORIAS_GARGALO]}
+              options={[
+                ...(categoriesQ.data ?? []).map((item) => item.nome),
+                ...(
+                  form.categoria &&
+                  !(categoriesQ.data ?? []).some((item) => item.nome === form.categoria)
+                    ? [form.categoria]
+                    : []
+                ),
+              ]}
             />
           </Field>
 
@@ -251,7 +280,15 @@ export function GargaloForm({ open, onOpenChange, initial }: Props) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">— sem pitstop —</SelectItem>
-                {(pitstopQ.data ?? []).map((p) => (
+                {[
+                  ...(pitstopQ.data ?? []),
+                  ...(
+                    form.pitstop &&
+                    !(pitstopQ.data ?? []).some((item) => item.nome === form.pitstop)
+                      ? [{ id: `current-${form.pitstop}`, nome: form.pitstop }]
+                      : []
+                  ),
+                ].map((p) => (
                   <SelectItem key={p.id} value={p.nome}>
                     {p.nome}
                   </SelectItem>
@@ -394,4 +431,3 @@ function SimpleSelect({
     </Select>
   );
 }
-
