@@ -48,7 +48,7 @@ const ITEMS: Item[] = [
     roles: ["analista", "coordenador", "administrador"],
   },
   {
-    title: "Visão de Cobertura da Carteira",
+    title: "Visão Cobertura da Carteira",
     url: "/neo/dashboard",
     icon: LineChart,
     roles: ["analista", "coordenador", "administrador"],
