@@ -45,6 +45,7 @@ export type Database = {
         Row: {
           ativo: boolean;
           created_at: string;
+          deleted_at: string | null;
           id: string;
           nome: string;
           ordem: number;
@@ -53,6 +54,7 @@ export type Database = {
         Insert: {
           ativo?: boolean;
           created_at?: string;
+          deleted_at?: string | null;
           id?: string;
           nome: string;
           ordem?: number;
@@ -61,6 +63,7 @@ export type Database = {
         Update: {
           ativo?: boolean;
           created_at?: string;
+          deleted_at?: string | null;
           id?: string;
           nome?: string;
           ordem?: number;
@@ -72,6 +75,7 @@ export type Database = {
         Row: {
           ativo: boolean;
           created_at: string;
+          deleted_at: string | null;
           id: string;
           nome: string;
           ordem: number;
@@ -80,6 +84,7 @@ export type Database = {
         Insert: {
           ativo?: boolean;
           created_at?: string;
+          deleted_at?: string | null;
           id?: string;
           nome: string;
           ordem?: number;
@@ -88,6 +93,7 @@ export type Database = {
         Update: {
           ativo?: boolean;
           created_at?: string;
+          deleted_at?: string | null;
           id?: string;
           nome?: string;
           ordem?: number;
@@ -171,6 +177,7 @@ export type Database = {
         Row: {
           ativo: boolean;
           created_at: string;
+          deleted_at: string | null;
           id: string;
           nome: string;
           ordem: number;
@@ -179,6 +186,7 @@ export type Database = {
         Insert: {
           ativo?: boolean;
           created_at?: string;
+          deleted_at?: string | null;
           id?: string;
           nome: string;
           ordem?: number;
@@ -187,6 +195,7 @@ export type Database = {
         Update: {
           ativo?: boolean;
           created_at?: string;
+          deleted_at?: string | null;
           id?: string;
           nome?: string;
           ordem?: number;
@@ -297,6 +306,7 @@ export type Database = {
         Row: {
           ativo: boolean;
           created_at: string;
+          deleted_at: string | null;
           id: string;
           nome: string;
           ordem: number;
@@ -305,6 +315,7 @@ export type Database = {
         Insert: {
           ativo?: boolean;
           created_at?: string;
+          deleted_at?: string | null;
           id?: string;
           nome: string;
           ordem?: number;
@@ -313,6 +324,7 @@ export type Database = {
         Update: {
           ativo?: boolean;
           created_at?: string;
+          deleted_at?: string | null;
           id?: string;
           nome?: string;
           ordem?: number;
@@ -346,6 +358,13 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_soft_delete_option: {
+        Args: {
+          target_id: string;
+          target_table: string;
+        };
+        Returns: undefined;
+      };
       admin_update_user: {
         Args: {
           next_active: boolean;
