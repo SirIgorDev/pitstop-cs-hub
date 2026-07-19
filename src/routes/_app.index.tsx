@@ -25,7 +25,7 @@ import { SEGMENTOS_GARGALO } from "@/lib/constants";
 
 export const Route = createFileRoute("/_app/")({
   component: DashboardGargalos,
-  head: () => ({ meta: [{ title: "Dashboard de Gargalos — PitStop CS" }] }),
+  head: () => ({ meta: [{ title: "Dashboard de Gargalos — Controller CS" }] }),
 });
 
 type GargaloDashboardRow = {
