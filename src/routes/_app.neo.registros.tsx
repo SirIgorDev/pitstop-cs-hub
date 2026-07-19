@@ -40,7 +40,7 @@ import { ESTEIRAS_NEO, TIPOS_NEO } from "@/lib/constants";
 
 export const Route = createFileRoute("/_app/neo/registros")({
   component: NeoRegistrosPage,
-  head: () => ({ meta: [{ title: "Registros Neo — PitStop CS" }] }),
+  head: () => ({ meta: [{ title: "Registros Neo — Controller CS" }] }),
 });
 
 const PAGE_SIZE = 15;
