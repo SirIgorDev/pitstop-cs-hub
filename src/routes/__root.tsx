@@ -79,14 +79,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "PitStop CS — Fortes Tecnologia" },
+      { title: "Controller CS — Fortes Tecnologia" },
       {
         name: "description",
         content:
           "Sistema interno do time de Customer Success da Fortes Tecnologia para gestão de gargalos e atendimentos Neo.",
       },
       { name: "author", content: "Fortes Tecnologia" },
-      { property: "og:title", content: "PitStop CS — Fortes Tecnologia" },
+      { property: "og:title", content: "Controller CS — Fortes Tecnologia" },
       {
         property: "og:description",
         content: "Centraliza registros de gargalos e atendimentos Neo do time de CS.",
