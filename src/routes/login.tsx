@@ -87,7 +87,7 @@ function LoginPage() {
 
         <div className="w-full max-w-md text-center">
           <h2 className="text-3xl font-semibold leading-tight text-white">Controller CS</h2>
-          <p className="mt-3 text-sm leading-relaxed text-white/90">
+          <p className="mt-3 text-center text-sm leading-relaxed text-white/90">
             Acompanhe indicadores em tempo real e reduza o trabalho manual
           </p>
         </div>
@@ -119,7 +119,7 @@ function LoginPage() {
           <h1 className="text-center text-2xl font-semibold text-foreground">
             Acesse o Controller CS
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-center text-sm text-muted-foreground">
             Use seu e-mail corporativo da Fortes Tecnologia.
           </p>
 
