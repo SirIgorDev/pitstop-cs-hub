@@ -9,7 +9,7 @@ import { useMockRole } from "@/lib/mock-role";
 
 export const Route = createFileRoute("/_app/auditoria")({
   component: AuditoriaPage,
-  head: () => ({ meta: [{ title: "Auditoria — PitStop CS" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Auditoria — Controller CS" }, { name: "robots", content: "noindex" }] }),
 });
 
 const EVENTOS: {
