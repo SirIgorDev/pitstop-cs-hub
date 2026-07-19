@@ -4,6 +4,7 @@ import { Loader2, ShieldOff } from "lucide-react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
+import { AppFooter } from "@/components/app-footer";
 import { useAuth } from "@/lib/mock-role";
 import { Button } from "@/components/ui/button";
 
@@ -36,8 +37,8 @@ function AppLayout() {
           <ShieldOff className="mx-auto h-10 w-10 text-destructive" />
           <h1 className="mt-4 text-lg font-semibold text-foreground">Acesso desativado</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sua conta está inativa. Fale com um administrador do PitStop CS para
-            reativar seu acesso.
+            Sua conta está inativa. Fale com um administrador do Controller CS para reativar seu
+            acesso.
           </p>
           <Button className="mt-6" variant="outline" onClick={() => void signOut()}>
             Sair
@@ -58,6 +59,7 @@ function AppLayout() {
               <Outlet />
             </div>
           </main>
+          <AppFooter />
         </SidebarInset>
       </div>
     </SidebarProvider>
