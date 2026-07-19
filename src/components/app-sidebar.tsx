@@ -79,12 +79,16 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-3">
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground font-bold">
-            F
-          </div>
+          <img
+            src="/fortes-oficial.jpg"
+            alt="Fortes Tecnologia"
+            className="h-9 w-9 shrink-0 rounded-md bg-white object-contain p-0.5"
+          />
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-sm font-semibold leading-tight text-foreground">PitStop CS</div>
+              <div className="text-sm font-semibold leading-tight text-foreground">
+                Controller CS
+              </div>
               <div className="truncate text-xs text-muted-foreground">Fortes Tecnologia</div>
             </div>
           )}
