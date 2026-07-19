@@ -48,7 +48,7 @@ import {
 
 export const Route = createFileRoute("/_app/gargalos")({
   component: GargalosPage,
-  head: () => ({ meta: [{ title: "Gargalos — PitStop CS" }] }),
+  head: () => ({ meta: [{ title: "Gargalos — Controller CS" }] }),
 });
 
 const PAGE_SIZE = 15;
