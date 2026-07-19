@@ -29,11 +29,36 @@ type Item = {
 };
 
 const ITEMS: Item[] = [
-  { title: "Visão Geral", url: "/", icon: LayoutDashboard, roles: ["analista", "coordenador", "administrador"] },
-  { title: "Gargalos", url: "/gargalos", icon: AlertOctagon, roles: ["analista", "coordenador", "administrador"] },
-  { title: "Registros Neo", url: "/neo/registros", icon: ClipboardList, roles: ["analista", "coordenador", "administrador"] },
-  { title: "Dashboard Neo", url: "/neo/dashboard", icon: LineChart, roles: ["analista", "coordenador", "administrador"] },
-  { title: "Auditoria", url: "/auditoria", icon: ScrollText, roles: ["coordenador", "administrador"] },
+  {
+    title: "Dashboard de Gargalos",
+    url: "/",
+    icon: LayoutDashboard,
+    roles: ["analista", "coordenador", "administrador"],
+  },
+  {
+    title: "Cadastro de Gargalos",
+    url: "/gargalos",
+    icon: AlertOctagon,
+    roles: ["analista", "coordenador", "administrador"],
+  },
+  {
+    title: "Cadastro Neo",
+    url: "/neo/registros",
+    icon: ClipboardList,
+    roles: ["analista", "coordenador", "administrador"],
+  },
+  {
+    title: "Dashboard Cobertura de Carteira",
+    url: "/neo/dashboard",
+    icon: LineChart,
+    roles: ["analista", "coordenador", "administrador"],
+  },
+  {
+    title: "Auditoria",
+    url: "/auditoria",
+    icon: ScrollText,
+    roles: ["coordenador", "administrador"],
+  },
   { title: "Administração", url: "/administracao", icon: Settings2, roles: ["administrador"] },
 ];
 
