@@ -20,21 +20,19 @@ export const Route = createFileRoute("/_app/administracao")({
   head: () => ({ meta: [{ title: "Administração — PitStop CS" }, { name: "robots", content: "noindex" }] }),
 });
 
-const USUARIOS = [
-  { nome: "Marina Alves", email: "marina.alves@fortestecnologia.com.br", perfil: "Analista de CS", ativo: true },
-  { nome: "Bruno Teixeira", email: "bruno.teixeira@fortestecnologia.com.br", perfil: "Analista de CS", ativo: true },
-  { nome: "Camila Rocha", email: "camila.rocha@fortestecnologia.com.br", perfil: "Analista de CS", ativo: true },
-  { nome: "Rafael Cordeiro", email: "rafael.cordeiro@fortestecnologia.com.br", perfil: "Coordenador", ativo: true },
-  { nome: "Juliana Prado", email: "juliana.prado@fortestecnologia.com.br", perfil: "Administrador", ativo: true },
-  { nome: "Diego Nogueira", email: "diego.nogueira@fortestecnologia.com.br", perfil: "Analista de CS", ativo: false },
-];
+const USUARIOS: {
+  nome: string;
+  email: string;
+  perfil: string;
+  ativo: boolean;
+}[] = [];
 
 const LISTAS = [
-  { nome: "Segmentos", itens: 8 },
-  { nome: "Tipos de gargalo", itens: 12 },
-  { nome: "Status de gargalo", itens: 4 },
-  { nome: "Motivos de atendimento", itens: 15 },
-  { nome: "Canais de atendimento", itens: 3 },
+  { nome: "Segmentos", itens: 0 },
+  { nome: "Tipos de gargalo", itens: 0 },
+  { nome: "Status de gargalo", itens: 0 },
+  { nome: "Motivos de atendimento", itens: 0 },
+  { nome: "Canais de atendimento", itens: 0 },
 ];
 
 function AdministracaoPage() {
@@ -87,7 +85,13 @@ function AdministracaoPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {USUARIOS.map((u) => (
+                {USUARIOS.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-28 text-center text-muted-foreground">
+                      Nenhum usuário cadastrado.
+                    </TableCell>
+                  </TableRow>
+                ) : USUARIOS.map((u) => (
                   <TableRow key={u.email}>
                     <TableCell className="font-medium text-foreground">{u.nome}</TableCell>
                     <TableCell className="text-muted-foreground">{u.email}</TableCell>
