@@ -34,7 +34,7 @@ import { useAuth } from "@/lib/mock-role";
 
 export const Route = createFileRoute("/_app/neo/dashboard")({
   component: NeoDashboardPage,
-  head: () => ({ meta: [{ title: "Dashboard Neo — PitStop CS" }] }),
+  head: () => ({ meta: [{ title: "Dashboard Neo — Controller CS" }] }),
 });
 
 type NeoRow = {
