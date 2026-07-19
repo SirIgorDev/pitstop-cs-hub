@@ -1,13 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { History, List, Plus, Users } from "lucide-react";
+import { History, List, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -219,6 +229,7 @@ function UsersPanel() {
 function ListManager({ table, title }: { table: OptionTable; title: string }) {
   const queryClient = useQueryClient();
   const [nome, setNome] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; nome: string } | null>(null);
   const queryKey = ["admin-options", table];
   const refreshOptionQueries = async () => {
     // A tela administrativa e os formulários usam chaves de cache diferentes.
@@ -235,6 +246,7 @@ function ListManager({ table, title }: { table: OptionTable; title: string }) {
       const { data, error } = await supabase
         .from(table)
         .select("id, nome, ativo, ordem")
+        .is("deleted_at", null)
         .order("ordem")
         .order("nome");
       if (error) throw error;
@@ -275,6 +287,23 @@ function ListManager({ table, title }: { table: OptionTable; title: string }) {
     },
     onError: (error: Error) =>
       toast.error("Não foi possível atualizar", { description: error.message }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { error } = await supabase.rpc("admin_soft_delete_option", {
+        target_table: table,
+        target_id: id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setPendingDelete(null);
+      toast.success("Opção excluída");
+      void refreshOptionQueries();
+    },
+    onError: (error: Error) =>
+      toast.error("Não foi possível excluir", { description: error.message }),
   });
 
   return (
@@ -325,11 +354,46 @@ function ListManager({ table, title }: { table: OptionTable; title: string }) {
                 <span className="w-12 text-xs text-muted-foreground">
                   {item.ativo ? "Ativo" : "Inativo"}
                 </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label={`Excluir ${item.nome}`}
+                  disabled={deleteMutation.isPending}
+                  onClick={() => setPendingDelete({ id: item.id, nome: item.nome })}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </li>
           ))}
         </ul>
       )}
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir “{pendingDelete?.nome}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A opção será excluída somente se nunca tiver sido utilizada. A operação é lógica,
+              preserva a auditoria e não pode ser executada por outros perfis.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (pendingDelete) deleteMutation.mutate({ id: pendingDelete.id });
+              }}
+            >
+              {deleteMutation.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
