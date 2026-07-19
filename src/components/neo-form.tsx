@@ -79,11 +79,15 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
 
   const statusQ = useQuery({
     queryKey: ["status_neo_options"],
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("status_neo_options")
         .select("id, nome, ativo, ordem")
         .eq("ativo", true)
+        .is("deleted_at", null)
         .order("ordem");
       if (error) throw error;
       return data;
@@ -92,11 +96,15 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
 
   const escalonouQ = useQuery({
     queryKey: ["escalonou_para_options"],
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("escalonou_para_options")
         .select("id, nome, ativo, ordem")
         .eq("ativo", true)
+        .is("deleted_at", null)
         .order("ordem");
       if (error) throw error;
       return data;
