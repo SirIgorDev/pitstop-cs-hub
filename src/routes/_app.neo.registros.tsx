@@ -68,6 +68,7 @@ function NeoRegistrosPage() {
         .from("status_neo_options")
         .select("id, nome, ordem")
         .eq("ativo", true)
+        .is("deleted_at", null)
         .order("ordem");
       if (error) throw error;
       return data;
