@@ -86,7 +86,9 @@ function LoginPage() {
         </div>
 
         <div className="w-full max-w-md text-center">
-          <h2 className="text-3xl font-semibold leading-tight text-white">Controller CS</h2>
+          <h2 className="text-left text-3xl font-semibold leading-tight text-white">
+            Controller CS
+          </h2>
           <p className="mt-3 text-center text-sm leading-relaxed text-white/90">
             Acompanhe indicadores em tempo real e reduza o trabalho manual
           </p>
