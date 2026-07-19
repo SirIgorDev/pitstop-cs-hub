@@ -12,48 +12,14 @@ export const Route = createFileRoute("/_app/auditoria")({
   head: () => ({ meta: [{ title: "Auditoria — PitStop CS" }, { name: "robots", content: "noindex" }] }),
 });
 
-const EVENTOS = [
-  {
-    quando: "18/07/2026 09:14",
-    autor: "Marina Alves",
-    acao: "Atualização",
-    entidade: "Gargalo",
-    id: "GRG-2411",
-    detalhe: "Status alterado de \"Aberto\" para \"Em andamento\".",
-  },
-  {
-    quando: "18/07/2026 08:50",
-    autor: "Rafael Cordeiro",
-    acao: "Atualização",
-    entidade: "Gargalo",
-    id: "GRG-2408",
-    detalhe: "Analista responsável alterado para Camila Rocha.",
-  },
-  {
-    quando: "18/07/2026 08:32",
-    autor: "Marina Alves",
-    acao: "Criação",
-    entidade: "Registro Neo",
-    id: "NEO-8821",
-    detalhe: "Novo atendimento registrado — Rede Farma Bem.",
-  },
-  {
-    quando: "17/07/2026 17:41",
-    autor: "Juliana Prado",
-    acao: "Criação",
-    entidade: "Usuário",
-    id: "usr-0117",
-    detalhe: "Novo usuário convidado: diego.nogueira@fortestecnologia.com.br.",
-  },
-  {
-    quando: "17/07/2026 15:02",
-    autor: "Bruno Teixeira",
-    acao: "Exclusão",
-    entidade: "Registro Neo",
-    id: "NEO-8799",
-    detalhe: "Registro removido — duplicado.",
-  },
-];
+const EVENTOS: {
+  quando: string;
+  autor: string;
+  acao: string;
+  entidade: string;
+  id: string;
+  detalhe: string;
+}[] = [];
 
 function acaoBadge(a: string) {
   if (a === "Criação") return "border-success/30 bg-success/5 text-success";
@@ -91,8 +57,13 @@ function AuditoriaPage() {
         </Button>
       </div>
 
-      <ol className="relative space-y-3 border-l border-border pl-6">
-        {EVENTOS.map((e, i) => (
+      {EVENTOS.length === 0 ? (
+        <div className="rounded-md border border-border bg-background px-5 py-12 text-center text-sm text-muted-foreground">
+          Nenhum evento de auditoria registrado.
+        </div>
+      ) : (
+        <ol className="relative space-y-3 border-l border-border pl-6">
+          {EVENTOS.map((e, i) => (
           <li key={i} className="relative">
             <span className="absolute -left-[27px] top-2 h-2.5 w-2.5 rounded-full border-2 border-background bg-primary" />
             <div className="rounded-md border border-border bg-background px-4 py-3">
@@ -111,8 +82,9 @@ function AuditoriaPage() {
               </p>
             </div>
           </li>
-        ))}
-      </ol>
+          ))}
+        </ol>
+      )}
     </>
   );
 }
