@@ -8,14 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/mock-role";
 import { toast } from "sonner";
+import { AppFooter } from "@/components/app-footer";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
   head: () => ({
-    meta: [
-      { title: "Entrar — PitStop CS" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Entrar — Controller CS" }, { name: "robots", content: "noindex" }],
   }),
 });
 
@@ -43,7 +41,7 @@ function LoginPage() {
       toast.error("Não foi possível entrar", { description: error.message });
       return;
     }
-    toast.success("Bem-vindo(a) ao PitStop CS");
+    toast.success("Bem-vindo(a) ao Controller CS");
     navigate({ to: "/" });
   };
 
@@ -74,9 +72,11 @@ function LoginPage() {
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
       <aside className="relative hidden flex-col justify-between bg-primary p-12 text-primary-foreground lg:flex">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-md bg-primary-foreground text-primary font-bold">
-            F
-          </div>
+          <img
+            src="/fortes-oficial.jpg"
+            alt="Fortes Tecnologia"
+            className="h-12 w-12 rounded-md bg-white object-contain p-1"
+          />
           <div>
             <div className="text-sm font-semibold uppercase tracking-wider opacity-90">
               Fortes Tecnologia
@@ -86,10 +86,10 @@ function LoginPage() {
         </div>
 
         <div className="max-w-md">
-          <h2 className="text-3xl font-semibold leading-tight">PitStop CS</h2>
+          <h2 className="text-3xl font-semibold leading-tight">Controller CS</h2>
           <p className="mt-3 text-sm leading-relaxed opacity-90">
-            Centralize registros de gargalos e atendimentos Neo, acompanhe indicadores
-            em tempo real e reduza o trabalho manual do time de Customer Success.
+            Centralize registros de gargalos e atendimentos Neo, acompanhe indicadores em tempo real
+            e reduza o trabalho manual do time de Customer Success.
           </p>
         </div>
 
@@ -103,24 +103,30 @@ function LoginPage() {
         />
       </aside>
 
-      <section className="flex items-center justify-center bg-background p-6">
+      <section className="relative flex items-center justify-center bg-background p-6 pb-24">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="grid h-10 w-10 place-items-center rounded-md bg-primary text-primary-foreground font-bold">
-              F
-            </div>
+            <img
+              src="/fortes-oficial.jpg"
+              alt="Fortes Tecnologia"
+              className="h-12 w-12 rounded-md bg-white object-contain p-1"
+            />
             <div>
-              <div className="text-sm font-semibold text-foreground">PitStop CS</div>
+              <div className="text-sm font-semibold text-foreground">Controller CS</div>
               <div className="text-xs text-muted-foreground">Fortes Tecnologia</div>
             </div>
           </div>
 
-          <h1 className="text-2xl font-semibold text-foreground">Acesse o PitStop CS</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Acesse o Controller CS</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Use seu e-mail corporativo da Fortes Tecnologia.
           </p>
 
-          <Tabs value={tab} onValueChange={(v) => setTab(v as "entrar" | "cadastrar")} className="mt-6">
+          <Tabs
+            value={tab}
+            onValueChange={(v) => setTab(v as "entrar" | "cadastrar")}
+            className="mt-6"
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="entrar">Entrar</TabsTrigger>
               <TabsTrigger value="cadastrar">Cadastrar</TabsTrigger>
@@ -168,7 +174,9 @@ function LoginPage() {
                   disabled={enviando}
                 >
                   {enviando ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando…</>
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando…
+                    </>
                   ) : (
                     "Entrar"
                   )}
@@ -224,7 +232,9 @@ function LoginPage() {
                   disabled={enviando}
                 >
                   {enviando ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cadastrando…</>
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cadastrando…
+                    </>
                   ) : (
                     "Criar conta"
                   )}
@@ -240,6 +250,9 @@ function LoginPage() {
               Voltar para a visão geral
             </Link>
           </p>
+        </div>
+        <div className="absolute inset-x-0 bottom-0">
+          <AppFooter />
         </div>
       </section>
     </div>
