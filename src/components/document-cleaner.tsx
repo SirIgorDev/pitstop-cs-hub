@@ -16,7 +16,10 @@ export function DocumentCleaner() {
   };
 
   return (
-    <section className="max-w-xl rounded-md border border-border bg-background p-6">
+    <section
+      aria-label="Ferramenta para limpar CPF ou CNPJ"
+      className="max-w-xl rounded-md border border-border bg-background p-6"
+    >
       <h2 className="text-base font-semibold text-foreground">Limpar CPF/CNPJ</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Remove pontos, barras, traços e espaços. O documento não é salvo.
