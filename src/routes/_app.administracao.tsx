@@ -220,6 +220,15 @@ function ListManager({ table, title }: { table: OptionTable; title: string }) {
   const queryClient = useQueryClient();
   const [nome, setNome] = useState("");
   const queryKey = ["admin-options", table];
+  const refreshOptionQueries = async () => {
+    // A tela administrativa e os formulários usam chaves de cache diferentes.
+    // Atualize ambas para propagar imediatamente qualquer alteração da lista.
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey }),
+      queryClient.invalidateQueries({ queryKey: [table] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-history"] }),
+    ]);
+  };
   const query = useQuery({
     queryKey,
     queryFn: async () => {
@@ -246,8 +255,7 @@ function ListManager({ table, title }: { table: OptionTable; title: string }) {
     onSuccess: () => {
       setNome("");
       toast.success(`${title}: opção adicionada`);
-      void queryClient.invalidateQueries({ queryKey });
-      void queryClient.invalidateQueries({ queryKey: ["admin-history"] });
+      void refreshOptionQueries();
     },
     onError: (error: Error) =>
       toast.error("Não foi possível adicionar", { description: error.message }),
@@ -263,8 +271,7 @@ function ListManager({ table, title }: { table: OptionTable; title: string }) {
     },
     onSuccess: () => {
       toast.success("Situação atualizada");
-      void queryClient.invalidateQueries({ queryKey });
-      void queryClient.invalidateQueries({ queryKey: ["admin-history"] });
+      void refreshOptionQueries();
     },
     onError: (error: Error) =>
       toast.error("Não foi possível atualizar", { description: error.message }),
