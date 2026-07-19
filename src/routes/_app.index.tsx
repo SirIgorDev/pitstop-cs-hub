@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Clock, RotateCcw, Timer } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -365,10 +365,10 @@ function DashboardChart({
             accessibilityLayer
             data={data}
             layout="vertical"
-            margin={{ left: 4, right: 24, top: 4, bottom: 4 }}
+            margin={{ left: 4, right: 40, top: 4, bottom: 4 }}
           >
             <CartesianGrid horizontal={false} />
-            <XAxis type="number" allowDecimals={false} />
+            <XAxis type="number" allowDecimals={false} hide />
             <YAxis
               type="category"
               dataKey="nome"
@@ -397,6 +397,12 @@ function DashboardChart({
               fill="var(--color-quantidade)"
               radius={[0, 4, 4, 0]}
             >
+              <LabelList
+                dataKey="quantidade"
+                position="right"
+                className="fill-foreground"
+                fontSize={12}
+              />
               {data.map((item) => (
                 <Cell key={item.nome} fill={colorMap?.[item.nome] ?? "var(--color-quantidade)"} />
               ))}
