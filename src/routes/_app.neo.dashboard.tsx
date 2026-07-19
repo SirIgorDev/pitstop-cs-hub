@@ -9,35 +9,18 @@ export const Route = createFileRoute("/_app/neo/dashboard")({
 });
 
 const KPIS = [
-  { label: "Atendimentos no mês", value: "1.284", delta: "+12% vs. mês anterior" },
-  { label: "Tempo médio de atendimento", value: "14 min", delta: "-2 min vs. mês anterior" },
-  { label: "Resolução no 1º contato", value: "78%", delta: "+4 pp" },
-  { label: "Satisfação (CSAT)", value: "4,6", delta: "de 5,0" },
+  { label: "Atendimentos no mês", value: "0", delta: "" },
+  { label: "Tempo médio de atendimento", value: "—", delta: "" },
+  { label: "Resolução no 1º contato", value: "—", delta: "" },
+  { label: "Satisfação (CSAT)", value: "—", delta: "" },
 ];
 
-const CANAIS = [
-  { nome: "Chat Neo", pct: 58 },
-  { nome: "Telefone", pct: 27 },
-  { nome: "E-mail", pct: 15 },
-];
-
-const MOTIVOS = [
-  { nome: "Configuração fiscal", qtd: 214 },
-  { nome: "Folha de pagamento", qtd: 178 },
-  { nome: "Emissão de nota", qtd: 152 },
-  { nome: "Treinamento", qtd: 121 },
-  { nome: "Relatórios gerenciais", qtd: 96 },
-];
-
-const SEMANAS = [
-  { rot: "S1", val: 62 },
-  { rot: "S2", val: 78 },
-  { rot: "S3", val: 55 },
-  { rot: "S4", val: 90 },
-];
+const CANAIS: { nome: string; pct: number }[] = [];
+const MOTIVOS: { nome: string; qtd: number }[] = [];
+const SEMANAS: { rot: string; val: number }[] = [];
 
 function NeoDashboardPage() {
-  const maxSemana = Math.max(...SEMANAS.map((s) => s.val));
+  const maxSemana = Math.max(1, ...SEMANAS.map((s) => s.val));
   return (
     <>
       <PageHeader
@@ -46,7 +29,7 @@ function NeoDashboardPage() {
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline">
-              <CalendarRange className="mr-2 h-4 w-4" /> Julho / 2026
+              <CalendarRange className="mr-2 h-4 w-4" /> Mês atual
             </Button>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" /> Exportar
@@ -69,10 +52,12 @@ function NeoDashboardPage() {
         <div className="rounded-md border border-border bg-background lg:col-span-2">
           <div className="border-b border-border px-5 py-4">
             <h2 className="text-sm font-semibold text-foreground">Volume por semana</h2>
-            <p className="text-xs text-muted-foreground">Atendimentos concluídos por semana em julho.</p>
+            <p className="text-xs text-muted-foreground">Atendimentos concluídos por semana no período selecionado.</p>
           </div>
           <div className="flex h-56 items-end gap-6 px-6 pb-6 pt-8">
-            {SEMANAS.map((s) => (
+            {SEMANAS.length === 0 ? (
+              <div className="m-auto text-sm text-muted-foreground">Sem dados para exibir.</div>
+            ) : SEMANAS.map((s) => (
               <div key={s.rot} className="flex flex-1 flex-col items-center gap-2">
                 <div
                   className="w-full rounded-t bg-primary/80"
@@ -90,7 +75,9 @@ function NeoDashboardPage() {
             <h2 className="text-sm font-semibold text-foreground">Distribuição por canal</h2>
           </div>
           <ul className="space-y-3 px-5 py-4">
-            {CANAIS.map((c) => (
+            {CANAIS.length === 0 ? (
+              <li className="py-8 text-center text-sm text-muted-foreground">Sem dados para exibir.</li>
+            ) : CANAIS.map((c) => (
               <li key={c.nome}>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-foreground">{c.nome}</span>
@@ -111,7 +98,11 @@ function NeoDashboardPage() {
           <p className="text-xs text-muted-foreground">Top 5 motivos de contato no período.</p>
         </div>
         <ul className="divide-y divide-border">
-          {MOTIVOS.map((m) => (
+          {MOTIVOS.length === 0 ? (
+            <li className="px-5 py-10 text-center text-sm text-muted-foreground">
+              Nenhum motivo registrado.
+            </li>
+          ) : MOTIVOS.map((m) => (
             <li key={m.nome} className="flex items-center justify-between px-5 py-3 text-sm">
               <span className="text-foreground">{m.nome}</span>
               <span className="text-muted-foreground">{m.qtd} atendimentos</span>
