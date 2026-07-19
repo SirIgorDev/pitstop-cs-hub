@@ -83,16 +83,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Sistema interno do time de Customer Success da Fortes Tecnologia para gestão de gargalos e atendimentos Neo.",
+          "Sistema interno do time de Customer Success da Fortes Tecnologia.",
       },
       { name: "author", content: "Fortes Tecnologia" },
       { property: "og:title", content: "Controller CS — Fortes Tecnologia" },
       {
         property: "og:description",
-        content: "Centraliza registros de gargalos e atendimentos Neo do time de CS.",
+        content: "Sistema interno do time de Customer Success da Fortes Tecnologia.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Controller CS — Fortes Tecnologia" },
+      { name: "twitter:description", content: "Sistema interno do time de Customer Success da Fortes Tecnologia." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e92bdc73-0b0b-4936-8e1f-57987a40fd5d/id-preview-8641b8d9--b299b783-5cb2-4c74-bf1e-2a9f33901bcb.lovable.app-1784503597674.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e92bdc73-0b0b-4936-8e1f-57987a40fd5d/id-preview-8641b8d9--b299b783-5cb2-4c74-bf1e-2a9f33901bcb.lovable.app-1784503597674.png" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -102,7 +106,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
       },
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
   shellComponent: RootShell,
