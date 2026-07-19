@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   AlertOctagon,
   ClipboardList,
+  Eraser,
   LayoutDashboard,
   LineChart,
   ScrollText,
@@ -51,6 +52,12 @@ const ITEMS: Item[] = [
     title: "Visão Cobertura da Carteira",
     url: "/neo/dashboard",
     icon: LineChart,
+    roles: ["analista", "coordenador", "administrador"],
+  },
+  {
+    title: "Limpar CPF/CNPJ",
+    url: "/limpar-documento",
+    icon: Eraser,
     roles: ["analista", "coordenador", "administrador"],
   },
   {
