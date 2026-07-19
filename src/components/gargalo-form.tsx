@@ -115,8 +115,26 @@ export function GargaloForm({ open, onOpenChange, initial }: Props) {
 
   const mutation = useMutation({
     mutationFn: async (payload: Gargalo) => {
+      // Envie apenas colunas editáveis. O objeto de edição também contém
+      // campos calculados pelo banco, que não podem ser atualizados.
+      const next: Gargalo = {
+        data_registro: payload.data_registro,
+        cliente: payload.cliente,
+        segmento: payload.segmento,
+        responsavel_id: payload.responsavel_id,
+        categoria: payload.categoria,
+        pitstop: payload.pitstop,
+        descricao: payload.descricao,
+        impacto_cliente: payload.impacto_cliente,
+        urgencia: payload.urgencia,
+        status: payload.status,
+        risco_churn: payload.risco_churn,
+        acao_plano: payload.acao_plano,
+        data_prevista_resolucao: payload.data_prevista_resolucao,
+        data_resolucao: payload.data_resolucao,
+      };
+
       // Se status Resolvido e data_resolucao vazia, preencher com hoje
-      const next = { ...payload };
       if (next.status === "Resolvido" && !next.data_resolucao) {
         next.data_resolucao = new Date().toISOString().slice(0, 10);
       }
@@ -376,3 +394,4 @@ function SimpleSelect({
     </Select>
   );
 }
+
