@@ -26,6 +26,8 @@ export interface AuthUser {
   email: string;
   role: Role;
   ativo: boolean;
+  avatar_path: string | null;
+  foto_url: string | null;
 }
 
 interface Ctx {
@@ -45,6 +47,8 @@ const FALLBACK_USER: AuthUser = {
   email: "",
   role: "analista",
   ativo: false,
+  avatar_path: null,
+  foto_url: null,
 };
 
 export function MockRoleProvider({ children }: { children: ReactNode }) {
@@ -55,19 +59,29 @@ export function MockRoleProvider({ children }: { children: ReactNode }) {
   const loadProfile = async (uid: string) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, nome, email, role, ativo")
+      .select("id, nome, email, role, ativo, avatar_path")
       .eq("id", uid)
       .maybeSingle();
     if (error || !data) {
       setProfile(null);
       return;
     }
+    let photoUrl: string | null = null;
+    if (data.avatar_path) {
+      const { data: signed } = await supabase.storage
+        .from("avatars")
+        .createSignedUrl(data.avatar_path, 60 * 60);
+      photoUrl = signed?.signedUrl ?? null;
+    }
+
     setProfile({
       id: data.id,
       nome: data.nome,
       email: data.email,
       role: DB_TO_UI[data.role as DbRole] ?? "analista",
       ativo: data.ativo,
+      avatar_path: data.avatar_path,
+      foto_url: photoUrl,
     });
   };
 
