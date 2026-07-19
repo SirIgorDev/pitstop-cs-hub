@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Filter, Plus, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,79 +15,156 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { NeoForm } from "@/components/neo-form";
+import { EmptyState, ErrorState, LoadingState } from "@/components/state-views";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/mock-role";
+import { ESTEIRAS_NEO, TIPOS_NEO } from "@/lib/constants";
 
 export const Route = createFileRoute("/_app/neo/registros")({
   component: NeoRegistrosPage,
   head: () => ({ meta: [{ title: "Registros Neo — PitStop CS" }] }),
 });
 
-const REGISTROS = [
-  {
-    id: "NEO-8821",
-    data: "18/07/2026 09:14",
-    cliente: "Rede Farma Bem",
-    canal: "Chat Neo",
-    motivo: "Folha de pagamento",
-    duracao: "12 min",
-    resultado: "Resolvido",
-    analista: "Marina Alves",
-  },
-  {
-    id: "NEO-8820",
-    data: "18/07/2026 08:47",
-    cliente: "Construtora Vale Verde",
-    canal: "Telefone",
-    motivo: "Configuração fiscal",
-    duracao: "24 min",
-    resultado: "Encaminhado",
-    analista: "Marina Alves",
-  },
-  {
-    id: "NEO-8817",
-    data: "17/07/2026 17:02",
-    cliente: "Escritório Prado & Associados",
-    canal: "E-mail",
-    motivo: "Treinamento módulo fiscal",
-    duracao: "35 min",
-    resultado: "Resolvido",
-    analista: "Bruno Teixeira",
-  },
-  {
-    id: "NEO-8812",
-    data: "17/07/2026 14:20",
-    cliente: "Transportes Sul Norte",
-    canal: "Chat Neo",
-    motivo: "Emissão de NFS-e",
-    duracao: "18 min",
-    resultado: "Aguardando cliente",
-    analista: "Camila Rocha",
-  },
-  {
-    id: "NEO-8808",
-    data: "17/07/2026 10:55",
-    cliente: "Móveis Aurora",
-    canal: "Telefone",
-    motivo: "Relatório gerencial",
-    duracao: "9 min",
-    resultado: "Resolvido",
-    analista: "Marina Alves",
-  },
-];
-
-function resultadoBadge(r: string) {
-  if (r === "Resolvido") return "border-success/30 bg-success/5 text-success";
-  if (r === "Encaminhado") return "border-primary/30 bg-primary/5 text-primary";
-  return "border-warning/30 bg-warning/5 text-warning";
-}
+const PAGE_SIZE = 15;
 
 function NeoRegistrosPage() {
+  const { role } = useAuth();
+  const qc = useQueryClient();
+
+  const [search, setSearch] = useState("");
+  const [mes, setMes] = useState("all");
+  const [tipo, setTipo] = useState("all");
+  const [esteira, setEsteira] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [responsavel, setResponsavel] = useState("all");
+  const [page, setPage] = useState(1);
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [deleting, setDeleting] = useState<any>(null);
+
+  const statusQ = useQuery({
+    queryKey: ["status_neo_options", "all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("status_neo_options")
+        .select("id, nome, ordem")
+        .eq("ativo", true)
+        .order("ordem");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const analystsQ = useQuery({
+    queryKey: ["profiles_ativos_all"],
+    enabled: role !== "analista",
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, nome").order("nome");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const query = useQuery({
+    queryKey: ["registros_neo", { search, mes, tipo, esteira, status, responsavel, page }],
+    queryFn: async () => {
+      let q = supabase
+        .from("registros_neo")
+        .select(
+          "id, protocolo_neo, data_contato, nome_cliente, telefone, tipo, esteira, status, escalonou_para, observacao, responsavel_id, created_by",
+          { count: "exact" },
+        )
+        .is("deleted_at", null);
+
+      if (search.trim()) {
+        const s = search.trim();
+        q = q.or(`protocolo_neo.ilike.%${s}%,nome_cliente.ilike.%${s}%`);
+      }
+      if (tipo !== "all") q = q.eq("tipo", tipo as never);
+      if (esteira !== "all") q = q.eq("esteira", esteira as never);
+      if (status !== "all") q = q.eq("status", status);
+      if (responsavel !== "all") q = q.eq("responsavel_id", responsavel);
+      if (mes !== "all") {
+        const [y, m] = mes.split("-").map(Number);
+        const start = new Date(y, m - 1, 1).toISOString();
+        const end = new Date(y, m, 1).toISOString();
+        q = q.gte("data_contato", start).lt("data_contato", end);
+      }
+
+      const from = (page - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      q = q.order("data_contato", { ascending: false }).range(from, to);
+
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { data: data ?? [], count: count ?? 0 };
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("registros_neo")
+        .update({ deleted_at: new Date().toISOString() } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Registro excluído");
+      qc.invalidateQueries({ queryKey: ["registros_neo"] });
+      setDeleting(null);
+    },
+    onError: (err: Error) => {
+      toast.error("Não foi possível excluir", { description: err.message });
+    },
+  });
+
+  const meses = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 12 }).map((_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      return {
+        value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        label: d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+      };
+    });
+  }, []);
+
+  const total = query.data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
   return (
     <>
       <PageHeader
         title="Registros Neo"
-        description="Atendimentos realizados pelo time nos canais Neo (chat, telefone e e-mail)."
+        description="Atendimentos realizados pelo time nos canais Neo."
         actions={
-          <Button className="bg-primary text-primary-foreground hover:bg-primary-dark">
+          <Button
+            className="bg-primary text-primary-foreground hover:bg-primary-dark"
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" /> Novo registro
           </Button>
         }
@@ -93,48 +173,163 @@ function NeoRegistrosPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-64 flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar por cliente, canal ou motivo…" className="pl-9" />
+          <Input
+            placeholder="Buscar por protocolo ou cliente…"
+            className="pl-9"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
         </div>
-        <Button variant="outline">
-          <Filter className="mr-2 h-4 w-4" /> Filtros
-        </Button>
-        <Button variant="outline">Exportar CSV</Button>
+        <FilterSelect value={mes} onChange={(v) => { setMes(v); setPage(1); }} placeholder="Mês" options={[{ value: "all", label: "Todos os meses" }, ...meses]} />
+        <FilterSelect value={tipo} onChange={(v) => { setTipo(v); setPage(1); }} placeholder="Tipo" options={[{ value: "all", label: "Todos tipos" }, ...TIPOS_NEO.map((s) => ({ value: s, label: s }))]} />
+        <FilterSelect value={esteira} onChange={(v) => { setEsteira(v); setPage(1); }} placeholder="Esteira" options={[{ value: "all", label: "Todas esteiras" }, ...ESTEIRAS_NEO.map((s) => ({ value: s, label: s }))]} />
+        <FilterSelect value={status} onChange={(v) => { setStatus(v); setPage(1); }} placeholder="Status" options={[{ value: "all", label: "Todos status" }, ...(statusQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
+        {role !== "analista" && (
+          <FilterSelect
+            value={responsavel}
+            onChange={(v) => { setResponsavel(v); setPage(1); }}
+            placeholder="Responsável"
+            options={[{ value: "all", label: "Todos responsáveis" }, ...(analystsQ.data ?? []).map((a) => ({ value: a.id, label: a.nome }))]}
+          />
+        )}
       </div>
 
-      <div className="overflow-hidden rounded-md border border-border bg-background">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[110px]">ID</TableHead>
-              <TableHead>Data</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Canal</TableHead>
-              <TableHead>Motivo</TableHead>
-              <TableHead>Duração</TableHead>
-              <TableHead>Resultado</TableHead>
-              <TableHead>Analista</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {REGISTROS.map((r) => (
-              <TableRow key={r.id} className="cursor-pointer">
-                <TableCell className="font-mono text-xs text-muted-foreground">{r.id}</TableCell>
-                <TableCell className="text-muted-foreground">{r.data}</TableCell>
-                <TableCell className="font-medium text-foreground">{r.cliente}</TableCell>
-                <TableCell className="text-muted-foreground">{r.canal}</TableCell>
-                <TableCell className="text-muted-foreground">{r.motivo}</TableCell>
-                <TableCell className="text-muted-foreground">{r.duracao}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={resultadoBadge(r.resultado)}>
-                    {r.resultado}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{r.analista}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      {query.isLoading ? (
+        <LoadingState title="Carregando registros…" />
+      ) : query.isError ? (
+        <ErrorState title="Erro ao carregar" description={(query.error as Error).message} />
+      ) : total === 0 ? (
+        <EmptyState
+          title="Nenhum registro encontrado"
+          description="Ajuste os filtros ou registre um novo atendimento Neo."
+        />
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-md border border-border bg-background">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Protocolo</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Esteira</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Escalonou</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {query.data!.data.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{r.protocolo_neo}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(r.data_contato).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                    </TableCell>
+                    <TableCell className="font-medium text-foreground">{r.nome_cliente}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.tipo}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.esteira}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="border-border bg-muted text-foreground">
+                        {r.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{r.escalonou_para ?? "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditing(r);
+                          setFormOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleting(r)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              Página {page} de {totalPages} · {total} registro(s)
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+                Anterior
+              </Button>
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                Próxima
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+
+      <NeoForm open={formOpen} onOpenChange={setFormOpen} initial={editing ?? undefined} />
+
+      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir registro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação marcará o registro <strong>{deleting?.protocolo_neo}</strong> como excluído.
+              A operação fica registrada na auditoria.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleting && deleteMut.mutate(deleting.id)}
+              disabled={deleteMut.isPending}
+            >
+              {deleteMut.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
+  );
+}
+
+function FilterSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-auto min-w-40">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
