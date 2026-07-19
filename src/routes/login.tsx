@@ -85,11 +85,10 @@ function LoginPage() {
           </div>
         </div>
 
-        <div className="max-w-md">
-          <h2 className="text-3xl font-semibold leading-tight">Controller CS</h2>
-          <p className="mt-3 text-sm leading-relaxed opacity-90">
-            Centralize registros de gargalos e atendimentos Neo, acompanhe indicadores em tempo real
-            e reduza o trabalho manual do time de Customer Success.
+        <div className="w-full max-w-md text-center">
+          <h2 className="text-3xl font-semibold leading-tight text-white">Controller CS</h2>
+          <p className="mt-3 text-sm leading-relaxed text-white/90">
+            Acompanhe indicadores em tempo real e reduza o trabalho manual
           </p>
         </div>
 
@@ -117,7 +116,9 @@ function LoginPage() {
             </div>
           </div>
 
-          <h1 className="text-2xl font-semibold text-foreground">Acesse o Controller CS</h1>
+          <h1 className="text-center text-2xl font-semibold text-foreground">
+            Acesse o Controller CS
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Use seu e-mail corporativo da Fortes Tecnologia.
           </p>
