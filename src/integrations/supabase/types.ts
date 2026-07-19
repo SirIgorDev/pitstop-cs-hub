@@ -47,6 +47,132 @@ export type Database = {
         }
         Relationships: []
       }
+      escalonou_para_options: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gargalos: {
+        Row: {
+          acao_plano: string | null
+          categoria: Database["public"]["Enums"]["categoria_gargalo"]
+          cliente: string
+          created_at: string
+          created_by: string | null
+          data_prevista_resolucao: string | null
+          data_registro: string
+          data_resolucao: string | null
+          deleted_at: string | null
+          descricao: string
+          id: string
+          impacto_cliente: Database["public"]["Enums"]["impacto_gargalo"]
+          pitstop: string | null
+          responsavel_id: string
+          risco_churn: Database["public"]["Enums"]["risco_churn"]
+          segmento: Database["public"]["Enums"]["segmento_gargalo"]
+          status: Database["public"]["Enums"]["status_gargalo"]
+          tempo_resolucao_dias: number | null
+          updated_at: string
+          updated_by: string | null
+          urgencia: Database["public"]["Enums"]["urgencia_gargalo"]
+        }
+        Insert: {
+          acao_plano?: string | null
+          categoria: Database["public"]["Enums"]["categoria_gargalo"]
+          cliente: string
+          created_at?: string
+          created_by?: string | null
+          data_prevista_resolucao?: string | null
+          data_registro?: string
+          data_resolucao?: string | null
+          deleted_at?: string | null
+          descricao: string
+          id?: string
+          impacto_cliente: Database["public"]["Enums"]["impacto_gargalo"]
+          pitstop?: string | null
+          responsavel_id: string
+          risco_churn: Database["public"]["Enums"]["risco_churn"]
+          segmento: Database["public"]["Enums"]["segmento_gargalo"]
+          status?: Database["public"]["Enums"]["status_gargalo"]
+          tempo_resolucao_dias?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          urgencia: Database["public"]["Enums"]["urgencia_gargalo"]
+        }
+        Update: {
+          acao_plano?: string | null
+          categoria?: Database["public"]["Enums"]["categoria_gargalo"]
+          cliente?: string
+          created_at?: string
+          created_by?: string | null
+          data_prevista_resolucao?: string | null
+          data_registro?: string
+          data_resolucao?: string | null
+          deleted_at?: string | null
+          descricao?: string
+          id?: string
+          impacto_cliente?: Database["public"]["Enums"]["impacto_gargalo"]
+          pitstop?: string | null
+          responsavel_id?: string
+          risco_churn?: Database["public"]["Enums"]["risco_churn"]
+          segmento?: Database["public"]["Enums"]["segmento_gargalo"]
+          status?: Database["public"]["Enums"]["status_gargalo"]
+          tempo_resolucao_dias?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          urgencia?: Database["public"]["Enums"]["urgencia_gargalo"]
+        }
+        Relationships: []
+      }
+      pitstop_options: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           ativo: boolean
@@ -83,6 +209,90 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      registros_neo: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_contato: string
+          deleted_at: string | null
+          escalonou_para: string | null
+          esteira: Database["public"]["Enums"]["esteira_neo"]
+          id: string
+          nome_cliente: string
+          observacao: string | null
+          protocolo_neo: string
+          responsavel_id: string
+          status: string
+          telefone: string | null
+          tipo: Database["public"]["Enums"]["tipo_neo"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_contato?: string
+          deleted_at?: string | null
+          escalonou_para?: string | null
+          esteira: Database["public"]["Enums"]["esteira_neo"]
+          id?: string
+          nome_cliente: string
+          observacao?: string | null
+          protocolo_neo: string
+          responsavel_id: string
+          status: string
+          telefone?: string | null
+          tipo: Database["public"]["Enums"]["tipo_neo"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_contato?: string
+          deleted_at?: string | null
+          escalonou_para?: string | null
+          esteira?: Database["public"]["Enums"]["esteira_neo"]
+          id?: string
+          nome_cliente?: string
+          observacao?: string | null
+          protocolo_neo?: string
+          responsavel_id?: string
+          status?: string
+          telefone?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_neo"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      status_neo_options: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -123,6 +333,35 @@ export type Database = {
     }
     Enums: {
       app_role: "analyst" | "coordinator" | "admin"
+      categoria_gargalo:
+        | "Documentação / Processos"
+        | "Prazo de Atendimento / SLA"
+        | "Funcionalidades / Produto"
+        | "Legislação / Compliance Fiscal"
+        | "Comunicação / Relacionamento"
+        | "Treinamento / Capacitação"
+        | "Integração de Sistemas"
+        | "Financeiro / Cobrança"
+        | "Suporte Técnico / Sistema"
+        | "Onboarding / Implantação"
+      esteira_neo:
+        | "Contato realizado"
+        | "1° Contato"
+        | "2° Contato"
+        | "Cliente Proativo"
+        | "Em acompanhamento"
+        | "Contato sem sucesso"
+        | "Onboarding"
+        | "Cliente ativo"
+        | "Tentativa"
+        | "Meet Agendada"
+        | "Visita"
+      impacto_gargalo: "Baixo" | "Médio" | "Alto" | "Crítico"
+      risco_churn: "Baixo" | "Médio" | "Alto"
+      segmento_gargalo: "Corporativo" | "Contábil"
+      status_gargalo: "Aberto" | "Em Andamento" | "Monitorando" | "Resolvido"
+      tipo_neo: "Proativo" | "Reativo"
+      urgencia_gargalo: "Baixa" | "Média" | "Alta" | "Crítica"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -251,6 +490,37 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["analyst", "coordinator", "admin"],
+      categoria_gargalo: [
+        "Documentação / Processos",
+        "Prazo de Atendimento / SLA",
+        "Funcionalidades / Produto",
+        "Legislação / Compliance Fiscal",
+        "Comunicação / Relacionamento",
+        "Treinamento / Capacitação",
+        "Integração de Sistemas",
+        "Financeiro / Cobrança",
+        "Suporte Técnico / Sistema",
+        "Onboarding / Implantação",
+      ],
+      esteira_neo: [
+        "Contato realizado",
+        "1° Contato",
+        "2° Contato",
+        "Cliente Proativo",
+        "Em acompanhamento",
+        "Contato sem sucesso",
+        "Onboarding",
+        "Cliente ativo",
+        "Tentativa",
+        "Meet Agendada",
+        "Visita",
+      ],
+      impacto_gargalo: ["Baixo", "Médio", "Alto", "Crítico"],
+      risco_churn: ["Baixo", "Médio", "Alto"],
+      segmento_gargalo: ["Corporativo", "Contábil"],
+      status_gargalo: ["Aberto", "Em Andamento", "Monitorando", "Resolvido"],
+      tipo_neo: ["Proativo", "Reativo"],
+      urgencia_gargalo: ["Baixa", "Média", "Alta", "Crítica"],
     },
   },
 } as const
