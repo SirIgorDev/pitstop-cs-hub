@@ -1,115 +1,424 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarRange, Download } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowUpRight, CheckCircle2, ClipboardList, GitBranch, MessageSquare } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { PageHeader } from "@/components/page-header";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { EmptyState, ErrorState, LoadingState } from "@/components/state-views";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/mock-role";
 
 export const Route = createFileRoute("/_app/neo/dashboard")({
   component: NeoDashboardPage,
   head: () => ({ meta: [{ title: "Dashboard Neo — PitStop CS" }] }),
 });
 
-const KPIS = [
-  { label: "Atendimentos no mês", value: "0", delta: "" },
-  { label: "Tempo médio de atendimento", value: "—", delta: "" },
-  { label: "Resolução no 1º contato", value: "—", delta: "" },
-  { label: "Satisfação (CSAT)", value: "—", delta: "" },
-];
+type NeoRow = {
+  data_contato: string;
+  escalonou_para: string | null;
+  esteira: string;
+  nome_cliente: string;
+  status: string;
+  tipo: string;
+};
 
-const CANAIS: { nome: string; pct: number }[] = [];
-const MOTIVOS: { nome: string; qtd: number }[] = [];
-const SEMANAS: { rot: string; val: number }[] = [];
+type ChartDatum = { nome: string; quantidade: number };
+
+const barConfig = {
+  quantidade: { label: "Registros", color: "var(--primary)" },
+} satisfies ChartConfig;
+
+const lineConfig = {
+  quantidade: { label: "Registros", color: "var(--primary)" },
+} satisfies ChartConfig;
+
+const TYPE_COLORS: Record<string, string> = {
+  Proativo: "#2563eb",
+  Reativo: "#f97316",
+};
 
 function NeoDashboardPage() {
-  const maxSemana = Math.max(1, ...SEMANAS.map((s) => s.val));
+  const { role, user } = useAuth();
+  const queryClient = useQueryClient();
+  const [mes, setMes] = useState(currentMonth());
+
+  const query = useQuery({
+    queryKey: ["dashboard-neo", mes],
+    enabled: Boolean(user.id),
+    queryFn: async () => {
+      let request = supabase
+        .from("registros_neo")
+        .select("data_contato, escalonou_para, esteira, nome_cliente, status, tipo")
+        .is("deleted_at", null);
+
+      if (mes !== "all") {
+        const { start, end } = monthBounds(mes);
+        request = request.gte("data_contato", start).lt("data_contato", end);
+      }
+
+      const { data, error } = await request.order("data_contato", {
+        ascending: true,
+      });
+      if (error) throw error;
+      return (data ?? []) as NeoRow[];
+    },
+  });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("dashboard-neo-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "registros_neo" }, () => {
+        void queryClient.invalidateQueries({ queryKey: ["dashboard-neo"] });
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  const rows = useMemo(() => query.data ?? [], [query.data]);
+  const metrics = useMemo(() => calculateMetrics(rows), [rows]);
+  const charts = useMemo(
+    () => ({
+      tipo: groupBy(rows, (row) => row.tipo),
+      esteira: groupBy(rows, (row) => row.esteira),
+      status: groupBy(rows, (row) => row.status),
+      escalonamentos: groupBy(
+        rows.filter(isEscalated),
+        (row) => row.escalonou_para || "Não informado",
+      ),
+      evolucao: evolutionByMonth(rows),
+    }),
+    [rows],
+  );
+  const meses = useMemo(makeMonthOptions, []);
+
+  if (query.isLoading) {
+    return <LoadingState title="Carregando Dashboard Neo…" />;
+  }
+
+  if (query.isError) {
+    return (
+      <ErrorState
+        title="Não foi possível carregar o Dashboard Neo"
+        description={query.error.message}
+        action={<Button onClick={() => query.refetch()}>Tentar novamente</Button>}
+      />
+    );
+  }
+
   return (
     <>
       <PageHeader
         title="Dashboard Neo"
-        description="Indicadores consolidados dos atendimentos Neo."
+        description={
+          role === "analista"
+            ? "Indicadores dos seus atendimentos Neo."
+            : "Indicadores consolidados dos atendimentos Neo."
+        }
         actions={
-          <div className="flex items-center gap-2">
-            <Button variant="outline">
-              <CalendarRange className="mr-2 h-4 w-4" /> Mês atual
-            </Button>
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" /> Exportar
-            </Button>
-          </div>
+          <label className="grid min-w-52 gap-1.5 text-xs font-medium text-foreground">
+            Mês
+            <Select value={mes} onValueChange={setMes}>
+              <SelectTrigger aria-label="Mês">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os meses</SelectItem>
+                {meses.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
         }
       />
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {KPIS.map((k) => (
-          <div key={k.label} className="rounded-md border border-border bg-background p-5">
-            <div className="text-sm text-muted-foreground">{k.label}</div>
-            <div className="mt-2 text-2xl font-semibold text-foreground">{k.value}</div>
-            <div className="mt-1 text-xs text-muted-foreground">{k.delta}</div>
-          </div>
-        ))}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <Kpi label="Total de registros" value={metrics.total} icon={ClipboardList} />
+        <Kpi label="Proativos" value={metrics.proativos} icon={ArrowUpRight} />
+        <Kpi label="Reativos" value={metrics.reativos} icon={MessageSquare} />
+        <Kpi label="Clientes ativos" value={metrics.clientesAtivos} icon={CheckCircle2} />
+        <Kpi label="Registros escalonados" value={metrics.escalonados} icon={GitBranch} />
       </section>
 
-      <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-md border border-border bg-background lg:col-span-2">
-          <div className="border-b border-border px-5 py-4">
-            <h2 className="text-sm font-semibold text-foreground">Volume por semana</h2>
-            <p className="text-xs text-muted-foreground">Atendimentos concluídos por semana no período selecionado.</p>
-          </div>
-          <div className="flex h-56 items-end gap-6 px-6 pb-6 pt-8">
-            {SEMANAS.length === 0 ? (
-              <div className="m-auto text-sm text-muted-foreground">Sem dados para exibir.</div>
-            ) : SEMANAS.map((s) => (
-              <div key={s.rot} className="flex flex-1 flex-col items-center gap-2">
-                <div
-                  className="w-full rounded-t bg-primary/80"
-                  style={{ height: `${(s.val / maxSemana) * 100}%` }}
-                />
-                <div className="text-xs text-muted-foreground">{s.rot}</div>
-                <div className="text-xs font-medium text-foreground">{s.val * 5}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-md border border-border bg-background">
-          <div className="border-b border-border px-5 py-4">
-            <h2 className="text-sm font-semibold text-foreground">Distribuição por canal</h2>
-          </div>
-          <ul className="space-y-3 px-5 py-4">
-            {CANAIS.length === 0 ? (
-              <li className="py-8 text-center text-sm text-muted-foreground">Sem dados para exibir.</li>
-            ) : CANAIS.map((c) => (
-              <li key={c.nome}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-foreground">{c.nome}</span>
-                  <span className="text-muted-foreground">{c.pct}%</span>
-                </div>
-                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded bg-muted">
-                  <div className="h-full bg-primary" style={{ width: `${c.pct}%` }} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <section className="mt-6 rounded-md border border-border bg-background">
-        <div className="border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold text-foreground">Principais motivos</h2>
-          <p className="text-xs text-muted-foreground">Top 5 motivos de contato no período.</p>
-        </div>
-        <ul className="divide-y divide-border">
-          {MOTIVOS.length === 0 ? (
-            <li className="px-5 py-10 text-center text-sm text-muted-foreground">
-              Nenhum motivo registrado.
-            </li>
-          ) : MOTIVOS.map((m) => (
-            <li key={m.nome} className="flex items-center justify-between px-5 py-3 text-sm">
-              <span className="text-foreground">{m.nome}</span>
-              <span className="text-muted-foreground">{m.qtd} atendimentos</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {rows.length === 0 ? (
+        <EmptyState
+          className="mt-6"
+          title="Nenhum Registro Neo encontrado"
+          description="Não existem registros para o mês selecionado."
+        />
+      ) : (
+        <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <NeoBarChart title="Registros por tipo" data={charts.tipo} colorMap={TYPE_COLORS} />
+          <NeoBarChart title="Registros por esteira" data={charts.esteira} />
+          <NeoBarChart title="Registros por status" data={charts.status} />
+          <NeoBarChart
+            title="Escalonamentos"
+            data={charts.escalonamentos}
+            emptyMessage="Nenhum registro escalonado no período."
+          />
+          <EvolutionChart data={charts.evolucao} />
+        </section>
+      )}
     </>
   );
+}
+
+function Kpi({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  icon: typeof ClipboardList;
+}) {
+  return (
+    <article className="rounded-md border border-border bg-background p-5">
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-sm text-muted-foreground">{label}</span>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </div>
+      <p className="mt-4 text-2xl font-semibold tabular-nums text-foreground">
+        {value.toLocaleString("pt-BR")}
+      </p>
+    </article>
+  );
+}
+
+function NeoBarChart({
+  title,
+  data,
+  colorMap,
+  emptyMessage = "Sem dados para exibir.",
+}: {
+  title: string;
+  data: ChartDatum[];
+  colorMap?: Record<string, string>;
+  emptyMessage?: string;
+}) {
+  if (!data.length) {
+    return (
+      <ChartCard title={title}>
+        <p className="grid h-64 place-items-center text-sm text-muted-foreground">{emptyMessage}</p>
+      </ChartCard>
+    );
+  }
+
+  const height = Math.max(280, data.length * 34);
+  const axisWidth = Math.min(
+    190,
+    Math.max(100, Math.max(...data.map((item) => item.nome.length)) * 6.3),
+  );
+
+  return (
+    <ChartCard title={title}>
+      <ChartContainer config={barConfig} className="w-full" style={{ height }}>
+        <BarChart
+          accessibilityLayer
+          data={data}
+          layout="vertical"
+          margin={{ left: 4, right: 40, top: 4, bottom: 4 }}
+        >
+          <CartesianGrid horizontal={false} />
+          <XAxis type="number" allowDecimals={false} hide />
+          <YAxis
+            type="category"
+            dataKey="nome"
+            width={axisWidth}
+            tickLine={false}
+            axisLine={false}
+            tick={{ fontSize: 11 }}
+          />
+          <ChartTooltip
+            cursor={{ fill: "var(--muted)" }}
+            content={<ChartTooltipContent hideLabel />}
+          />
+          <Bar
+            dataKey="quantidade"
+            name="Registros"
+            fill="var(--color-quantidade)"
+            radius={[0, 4, 4, 0]}
+          >
+            <LabelList
+              dataKey="quantidade"
+              position="right"
+              className="fill-foreground"
+              fontSize={12}
+            />
+            {data.map((item) => (
+              <Cell key={item.nome} fill={colorMap?.[item.nome] ?? "var(--color-quantidade)"} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ChartContainer>
+    </ChartCard>
+  );
+}
+
+function EvolutionChart({ data }: { data: ChartDatum[] }) {
+  return (
+    <ChartCard title="Evolução mensal" className="xl:col-span-2">
+      <ChartContainer config={lineConfig} className="h-80 w-full">
+        <LineChart
+          accessibilityLayer
+          data={data}
+          margin={{ left: 8, right: 24, top: 16, bottom: 8 }}
+        >
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="nome" tickLine={false} axisLine={false} />
+          <YAxis allowDecimals={false} hide />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <Line
+            type="monotone"
+            dataKey="quantidade"
+            name="Registros"
+            stroke="var(--color-quantidade)"
+            strokeWidth={3}
+            dot={{ fill: "var(--color-quantidade)" }}
+          >
+            <LabelList
+              dataKey="quantidade"
+              position="top"
+              className="fill-foreground"
+              fontSize={12}
+            />
+          </Line>
+        </LineChart>
+      </ChartContainer>
+    </ChartCard>
+  );
+}
+
+function ChartCard({
+  title,
+  children,
+  className = "",
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <article
+      className={`overflow-hidden rounded-md border border-border bg-background ${className}`}
+    >
+      <header className="border-b border-border px-5 py-4">
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      </header>
+      <div className="p-4">{children}</div>
+    </article>
+  );
+}
+
+function calculateMetrics(rows: NeoRow[]) {
+  const clientesAtivos = new Set(
+    rows
+      .filter((row) => row.esteira === "Cliente ativo")
+      .map((row) => row.nome_cliente.trim().toLocaleLowerCase("pt-BR")),
+  ).size;
+
+  return {
+    total: rows.length,
+    proativos: rows.filter((row) => row.tipo === "Proativo").length,
+    reativos: rows.filter((row) => row.tipo === "Reativo").length,
+    clientesAtivos,
+    escalonados: rows.filter(isEscalated).length,
+  };
+}
+
+function isEscalated(row: NeoRow) {
+  const value = row.escalonou_para?.trim().toLocaleLowerCase("pt-BR");
+  return Boolean(value && value !== "não escalonado" && value !== "nao escalonado");
+}
+
+function groupBy(rows: NeoRow[], getKey: (row: NeoRow) => string): ChartDatum[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const key = getKey(row);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([nome, quantidade]) => ({ nome, quantidade }))
+    .sort((a, b) => b.quantidade - a.quantidade || a.nome.localeCompare(b.nome));
+}
+
+function evolutionByMonth(rows: NeoRow[]): ChartDatum[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const date = new Date(row.data_contato);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([value, quantidade]) => {
+      const [year, month] = value.split("-").map(Number);
+      return {
+        nome: new Date(year, month - 1, 1).toLocaleDateString("pt-BR", {
+          month: "short",
+          year: "2-digit",
+        }),
+        quantidade,
+      };
+    });
+}
+
+function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthBounds(value: string) {
+  const [year, month] = value.split("-").map(Number);
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  return {
+    start: new Date(`${year}-${String(month).padStart(2, "0")}-01T00:00:00`).toISOString(),
+    end: new Date(`${nextYear}-${String(nextMonth).padStart(2, "0")}-01T00:00:00`).toISOString(),
+  };
+}
+
+function makeMonthOptions() {
+  const now = new Date();
+  return Array.from({ length: 24 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
+    return {
+      value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+      label: date.toLocaleDateString("pt-BR", {
+        month: "long",
+        year: "numeric",
+      }),
+    };
+  });
 }
