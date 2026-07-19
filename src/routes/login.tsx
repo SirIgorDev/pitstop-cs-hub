@@ -4,6 +4,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/mock-role";
 import { toast } from "sonner";
@@ -24,23 +25,15 @@ function LoginPage() {
     if (!loading && session) navigate({ to: "/" });
   }, [loading, session, navigate]);
 
+  const [tab, setTab] = useState<"entrar" | "cadastrar">("entrar");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [nome, setNome] = useState("");
   const [mostrar, setMostrar] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  const [enviandoGoogle, setEnviandoGoogle] = useState(false);
-
-  const emailCorporativo = (valor: string) =>
-    valor.trim().toLowerCase().endsWith("@fortestecnologia.com.br");
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    if (!emailCorporativo(email)) {
-      toast.error("Acesso restrito", {
-        description: "Use um e-mail do domínio @fortestecnologia.com.br.",
-      });
-      return;
-    }
     setEnviando(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
     setEnviando(false);
@@ -52,22 +45,27 @@ function LoginPage() {
     navigate({ to: "/" });
   };
 
-  const handleGoogleLogin = async () => {
-    setEnviandoGoogle(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
+  const handleSignup = async (e: FormEvent) => {
+    e.preventDefault();
+    setEnviando(true);
+    const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
+    const { error } = await supabase.auth.signUp({
+      email,
+      password: senha,
       options: {
-        redirectTo: `${window.location.origin}/`,
-        queryParams: {
-          hd: "fortestecnologia.com.br",
-          prompt: "select_account",
-        },
+        emailRedirectTo: redirectTo,
+        data: { nome },
       },
     });
-    setEnviandoGoogle(false);
+    setEnviando(false);
     if (error) {
-      toast.error("Não foi possível entrar com Google", { description: error.message });
+      toast.error("Não foi possível cadastrar", { description: error.message });
+      return;
     }
+    toast.success("Conta criada", {
+      description: "Você já pode acessar o sistema.",
+    });
+    navigate({ to: "/" });
   };
 
   return (
@@ -127,35 +125,18 @@ function LoginPage() {
             Use seu e-mail corporativo da Fortes Tecnologia.
           </p>
 
-          <div className="mt-6 space-y-5">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleGoogleLogin}
-              disabled={enviandoGoogle || enviando}
-            >
-              {enviandoGoogle ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Redirecionando…
-                </>
-              ) : (
-                <>
-                  <span className="mr-2 text-base font-bold text-primary" aria-hidden>
-                    G
-                  </span>
-                  Entrar com Google
-                </>
-              )}
-            </Button>
+          <Tabs
+            value={tab}
+            onValueChange={(v) => setTab(v as "entrar" | "cadastrar")}
+            className="mt-6"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="entrar">Entrar</TabsTrigger>
+              <TabsTrigger value="cadastrar">Cadastrar</TabsTrigger>
+            </TabsList>
 
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">ou entre com sua senha</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-4">
+            <TabsContent value="entrar">
+              <form onSubmit={handleLogin} className="mt-6 space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="email">E-mail corporativo</Label>
                   <Input
@@ -203,8 +184,67 @@ function LoginPage() {
                     "Entrar"
                   )}
                 </Button>
-            </form>
-          </div>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="cadastrar">
+              <form onSubmit={handleSignup} className="mt-6 space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="nome">Nome completo</Label>
+                  <Input
+                    id="nome"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Seu nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email-cad">E-mail corporativo</Label>
+                  <Input
+                    id="email-cad"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="nome.sobrenome@fortestecnologia.com.br"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="senha-cad">Senha</Label>
+                  <Input
+                    id="senha-cad"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="Mínimo de 8 caracteres"
+                    minLength={8}
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    O acesso inicia como Analista. Um administrador pode alterar o perfil depois.
+                  </p>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary-dark"
+                  disabled={enviando}
+                >
+                  {enviando ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cadastrando…
+                    </>
+                  ) : (
+                    "Criar conta"
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
 
           <p className="mt-8 text-center text-xs text-muted-foreground">
             Ao entrar, você concorda com as políticas internas de uso do sistema.
