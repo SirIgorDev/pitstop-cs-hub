@@ -30,13 +30,13 @@ type Item = {
 
 const ITEMS: Item[] = [
   {
-    title: "Dashboard de Gargalos",
+    title: "Visão Gargalos",
     url: "/",
     icon: LayoutDashboard,
     roles: ["analista", "coordenador", "administrador"],
   },
   {
-    title: "Cadastro de Gargalos",
+    title: "Cadastro de Gargalo",
     url: "/gargalos",
     icon: AlertOctagon,
     roles: ["analista", "coordenador", "administrador"],
@@ -48,7 +48,7 @@ const ITEMS: Item[] = [
     roles: ["analista", "coordenador", "administrador"],
   },
   {
-    title: "Dashboard Cobertura de Carteira",
+    title: "Visão de Cobertura da Carteira",
     url: "/neo/dashboard",
     icon: LineChart,
     roles: ["analista", "coordenador", "administrador"],
