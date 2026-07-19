@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { ChevronDown, LogOut, User as UserIcon } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -13,10 +14,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ROLE_LABEL, useAuth } from "@/lib/mock-role";
 import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileDialog } from "@/components/profile-dialog";
 
 export function AppHeader() {
   const { user, role, signOut } = useAuth();
   const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const initials = user.nome
     .split(" ")
@@ -48,9 +52,12 @@ export function AppHeader() {
 
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-left hover:bg-muted">
-          <div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-            {initials}
-          </div>
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user.foto_url ?? undefined} alt={`Foto de ${user.nome}`} />
+            <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
           <div className="hidden min-w-0 sm:block">
             <div className="truncate text-sm font-medium text-foreground">{user.nome}</div>
             <div className="truncate text-xs text-muted-foreground">{ROLE_LABEL[role]}</div>
@@ -63,7 +70,7 @@ export function AppHeader() {
             <div className="text-xs font-normal text-muted-foreground">{user.email}</div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem onSelect={() => setProfileOpen(true)}>
             <UserIcon className="mr-2 h-4 w-4" /> Meu perfil
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -74,6 +81,7 @@ export function AppHeader() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
     </header>
   );
 }
