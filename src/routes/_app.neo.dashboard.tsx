@@ -42,6 +42,7 @@ type NeoRow = {
   escalonou_para: string | null;
   esteira: string;
   nome_cliente: string;
+  responsavel_id: string;
   status: string;
   tipo: string;
 };
@@ -65,19 +66,41 @@ function NeoDashboardPage() {
   const { role, user } = useAuth();
   const queryClient = useQueryClient();
   const [mes, setMes] = useState(currentMonth());
+  const [analista, setAnalista] = useState("all");
+  const canFilterAnalyst = role === "coordenador" || role === "administrador";
+
+  const analystsQuery = useQuery({
+    queryKey: ["dashboard-neo-analysts"],
+    enabled: canFilterAnalyst,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, nome")
+        .eq("role", "analyst")
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const query = useQuery({
-    queryKey: ["dashboard-neo", mes],
+    queryKey: ["dashboard-neo", mes, canFilterAnalyst ? analista : "own"],
     enabled: Boolean(user.id),
     queryFn: async () => {
       let request = supabase
         .from("registros_neo")
-        .select("data_contato, escalonou_para, esteira, nome_cliente, status, tipo")
+        .select("data_contato, escalonou_para, esteira, nome_cliente, responsavel_id, status, tipo")
         .is("deleted_at", null);
 
       if (mes !== "all") {
         const { start, end } = monthBounds(mes);
         request = request.gte("data_contato", start).lt("data_contato", end);
+      }
+
+      if (canFilterAnalyst && analista !== "all") {
+        request = request.eq("responsavel_id", analista);
       }
 
       const { data, error } = await request.order("data_contato", {
@@ -142,22 +165,42 @@ function NeoDashboardPage() {
             : "Indicadores consolidados dos atendimentos Neo."
         }
         actions={
-          <label className="grid min-w-52 gap-1.5 text-xs font-medium text-foreground">
-            Mês
-            <Select value={mes} onValueChange={setMes}>
-              <SelectTrigger aria-label="Mês">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os meses</SelectItem>
-                {meses.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
+          <div className="flex flex-wrap items-end gap-3">
+            {canFilterAnalyst && (
+              <label className="grid min-w-52 gap-1.5 text-xs font-medium text-foreground">
+                Analista
+                <Select value={analista} onValueChange={setAnalista}>
+                  <SelectTrigger aria-label="Analista">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os analistas</SelectItem>
+                    {(analystsQuery.data ?? []).map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            )}
+            <label className="grid min-w-52 gap-1.5 text-xs font-medium text-foreground">
+              Mês
+              <Select value={mes} onValueChange={setMes}>
+                <SelectTrigger aria-label="Mês">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os meses</SelectItem>
+                  {meses.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+          </div>
         }
       />
 
