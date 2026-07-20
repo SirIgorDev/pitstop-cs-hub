@@ -43,15 +43,15 @@ const ITEMS: Item[] = [
     roles: ["analista", "coordenador", "administrador"],
   },
   {
-    title: "Cadastro Neo",
-    url: "/neo/registros",
-    icon: ClipboardList,
-    roles: ["analista", "coordenador", "administrador"],
-  },
-  {
     title: "Visão Cobertura da Carteira",
     url: "/neo/dashboard",
     icon: LineChart,
+    roles: ["analista", "coordenador", "administrador"],
+  },
+  {
+    title: "Cadastro Neo",
+    url: "/neo/registros",
+    icon: ClipboardList,
     roles: ["analista", "coordenador", "administrador"],
   },
   {
