@@ -46,7 +46,11 @@ export const Route = createFileRoute("/_app/administracao")({
 });
 
 type OptionTable =
-  "categoria_gargalo_options" | "pitstop_options" | "status_neo_options" | "escalonou_para_options";
+  | "categoria_gargalo_options"
+  | "pitstop_options"
+  | "esteira_neo_options"
+  | "status_neo_options"
+  | "escalonou_para_options";
 
 const ROLE_LABEL: Record<DbRole, string> = {
   analyst: "Analista de CS",
@@ -57,6 +61,7 @@ const ROLE_LABEL: Record<DbRole, string> = {
 const LISTS: Array<{ table: OptionTable; title: string }> = [
   { table: "categoria_gargalo_options", title: "Categorias de gargalo" },
   { table: "pitstop_options", title: "PitStops" },
+  { table: "esteira_neo_options", title: "Esteiras Neo" },
   { table: "status_neo_options", title: "Status Neo" },
   { table: "escalonou_para_options", title: "Escalonou Para" },
 ];
@@ -406,6 +411,7 @@ function AdminHistory() {
         "profiles",
         "categoria_gargalo_options",
         "pitstop_options",
+        "esteira_neo_options",
         "status_neo_options",
         "escalonou_para_options",
       ];

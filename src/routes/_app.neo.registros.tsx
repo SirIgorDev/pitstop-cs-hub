@@ -36,7 +36,7 @@ import { NeoForm } from "@/components/neo-form";
 import { EmptyState, ErrorState, LoadingState } from "@/components/state-views";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/mock-role";
-import { ESTEIRAS_NEO, TIPOS_NEO } from "@/lib/constants";
+import { TIPOS_NEO } from "@/lib/constants";
 
 export const Route = createFileRoute("/_app/neo/registros")({
   component: NeoRegistrosPage,
@@ -66,6 +66,20 @@ function NeoRegistrosPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("status_neo_options")
+        .select("id, nome, ordem")
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .order("ordem");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const esteirasQ = useQuery({
+    queryKey: ["esteira_neo_options", "all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("esteira_neo_options")
         .select("id, nome, ordem")
         .eq("ativo", true)
         .is("deleted_at", null)
@@ -186,7 +200,7 @@ function NeoRegistrosPage() {
         </div>
         <FilterSelect value={mes} onChange={(v) => { setMes(v); setPage(1); }} placeholder="Mês" options={[{ value: "all", label: "Todos os meses" }, ...meses]} />
         <FilterSelect value={tipo} onChange={(v) => { setTipo(v); setPage(1); }} placeholder="Tipo" options={[{ value: "all", label: "Todos tipos" }, ...TIPOS_NEO.map((s) => ({ value: s, label: s }))]} />
-        <FilterSelect value={esteira} onChange={(v) => { setEsteira(v); setPage(1); }} placeholder="Esteira" options={[{ value: "all", label: "Todas esteiras" }, ...ESTEIRAS_NEO.map((s) => ({ value: s, label: s }))]} />
+        <FilterSelect value={esteira} onChange={(v) => { setEsteira(v); setPage(1); }} placeholder="Esteira" options={[{ value: "all", label: "Todas esteiras" }, ...(esteirasQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
         <FilterSelect value={status} onChange={(v) => { setStatus(v); setPage(1); }} placeholder="Status" options={[{ value: "all", label: "Todos status" }, ...(statusQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
         {role !== "analista" && (
           <FilterSelect

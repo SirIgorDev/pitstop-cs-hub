@@ -49,6 +49,7 @@ const ENTITY_LABELS: Record<string, string> = {
   profiles: "Usuário",
   categoria_gargalo_options: "Categoria de gargalo",
   pitstop_options: "PitStop",
+  esteira_neo_options: "Esteira Neo",
   status_neo_options: "Status Neo",
   escalonou_para_options: "Escalonou Para",
 };

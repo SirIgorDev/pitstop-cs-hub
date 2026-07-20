@@ -101,6 +101,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      esteira_neo_options: {
+        Row: {
+          ativo: boolean;
+          created_at: string;
+          deleted_at: string | null;
+          id: string;
+          nome: string;
+          ordem: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          ativo?: boolean;
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          nome: string;
+          ordem?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          ativo?: boolean;
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          nome?: string;
+          ordem?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       gargalos: {
         Row: {
           acao_plano: string | null;
@@ -252,7 +285,7 @@ export type Database = {
           data_contato: string;
           deleted_at: string | null;
           escalonou_para: string | null;
-          esteira: Database["public"]["Enums"]["esteira_neo"];
+          esteira: string;
           id: string;
           nome_cliente: string;
           observacao: string | null;
@@ -270,7 +303,7 @@ export type Database = {
           data_contato?: string;
           deleted_at?: string | null;
           escalonou_para?: string | null;
-          esteira: Database["public"]["Enums"]["esteira_neo"];
+          esteira: string;
           id?: string;
           nome_cliente: string;
           observacao?: string | null;
@@ -288,7 +321,7 @@ export type Database = {
           data_contato?: string;
           deleted_at?: string | null;
           escalonou_para?: string | null;
-          esteira?: Database["public"]["Enums"]["esteira_neo"];
+          esteira?: string;
           id?: string;
           nome_cliente?: string;
           observacao?: string | null;
