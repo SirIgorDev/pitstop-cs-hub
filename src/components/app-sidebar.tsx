@@ -31,13 +31,13 @@ type Item = {
 
 const ITEMS: Item[] = [
   {
-    title: "Visão Gargalos",
+    title: "Visão PitStop",
     url: "/",
     icon: LayoutDashboard,
     roles: ["analista", "coordenador", "administrador"],
   },
   {
-    title: "Cadastro de Gargalo",
+    title: "Cadastro de PitStop",
     url: "/gargalos",
     icon: AlertOctagon,
     roles: ["analista", "coordenador", "administrador"],
