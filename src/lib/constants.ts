@@ -32,21 +32,6 @@ export type RiscoChurn = (typeof RISCOS_CHURN)[number];
 export const TIPOS_NEO = ["Proativo", "Reativo"] as const;
 export type TipoNeo = (typeof TIPOS_NEO)[number];
 
-export const ESTEIRAS_NEO = [
-  "Contato realizado",
-  "1° Contato",
-  "2° Contato",
-  "Cliente Proativo",
-  "Em acompanhamento",
-  "Contato sem sucesso",
-  "Onboarding",
-  "Cliente ativo",
-  "Tentativa",
-  "Meet Agendada",
-  "Visita",
-] as const;
-export type EsteiraNeo = (typeof ESTEIRAS_NEO)[number];
-
 export function maskPhone(v: string): string {
   const d = v.replace(/\D/g, "").slice(0, 11);
   if (d.length <= 10) {

@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ESTEIRAS_NEO, TIPOS_NEO, maskPhone } from "@/lib/constants";
+import { TIPOS_NEO, maskPhone } from "@/lib/constants";
 
 type Registro = {
   id?: string;
@@ -93,6 +93,32 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
       return data;
     },
   });
+
+  const esteirasQ = useQuery({
+    queryKey: ["esteira_neo_options"],
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("esteira_neo_options")
+        .select("id, nome, ativo, ordem")
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .order("ordem");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (!open || isEdit || !esteirasQ.data?.length) return;
+    setForm((current) =>
+      esteirasQ.data.some((option) => option.nome === current.esteira)
+        ? current
+        : { ...current, esteira: esteirasQ.data[0].nome },
+    );
+  }, [esteirasQ.data, isEdit, open]);
 
   const escalonouQ = useQuery({
     queryKey: ["escalonou_para_options"],
@@ -242,11 +268,14 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ESTEIRAS_NEO.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
+                {(esteirasQ.data ?? []).map((t) => (
+                  <SelectItem key={t.id} value={t.nome}>
+                    {t.nome}
                   </SelectItem>
                 ))}
+                {isEdit && form.esteira && !(esteirasQ.data ?? []).some((t) => t.nome === form.esteira) && (
+                  <SelectItem value={form.esteira}>{form.esteira} (inativa)</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </Field>
