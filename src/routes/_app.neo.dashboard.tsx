@@ -62,10 +62,24 @@ const TYPE_COLORS: Record<string, string> = {
   Reativo: "#f97316",
 };
 
+type Periodo = "trimestral" | "semestral" | "anual";
+
+const PERIODO_OPTIONS: { value: Periodo; label: string; months: number }[] = [
+  { value: "trimestral", label: "Trimestral (últimos 3 meses)", months: 3 },
+  { value: "semestral", label: "Semestral (últimos 6 meses)", months: 6 },
+  { value: "anual", label: "Anual (últimos 12 meses)", months: 12 },
+];
+
+const ESTEIRA_COMPARATIVO = ["Contato realizado", "Contato sem sucesso"] as const;
+const ESTEIRA_COLORS: Record<string, string> = {
+  "Contato realizado": "#16a34a",
+  "Contato sem sucesso": "#dc2626",
+};
+
 function NeoDashboardPage() {
   const { role, user } = useAuth();
   const queryClient = useQueryClient();
-  const [mes, setMes] = useState(currentMonth());
+  const [periodo, setPeriodo] = useState<Periodo>("trimestral");
   const [analista, setAnalista] = useState("all");
   const canFilterAnalyst = role === "coordenador" || role === "administrador";
 
@@ -86,18 +100,16 @@ function NeoDashboardPage() {
   });
 
   const query = useQuery({
-    queryKey: ["dashboard-neo", mes, canFilterAnalyst ? analista : "own"],
+    queryKey: ["dashboard-neo", periodo, canFilterAnalyst ? analista : "own"],
     enabled: Boolean(user.id),
     queryFn: async () => {
+      const { start, end } = periodBounds(periodo);
       let request = supabase
         .from("registros_neo")
         .select("data_contato, escalonou_para, esteira, nome_cliente, responsavel_id, status, tipo")
-        .is("deleted_at", null);
-
-      if (mes !== "all") {
-        const { start, end } = monthBounds(mes);
-        request = request.gte("data_contato", start).lt("data_contato", end);
-      }
+        .is("deleted_at", null)
+        .gte("data_contato", start)
+        .lt("data_contato", end);
 
       if (canFilterAnalyst && analista !== "all") {
         request = request.eq("responsavel_id", analista);
@@ -126,6 +138,7 @@ function NeoDashboardPage() {
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
   const metrics = useMemo(() => calculateMetrics(rows), [rows]);
+  const cobertura = useMemo(() => calculateCobertura(rows), [rows]);
   const charts = useMemo(
     () => ({
       tipo: groupBy(rows, (row) => row.tipo),
@@ -139,7 +152,6 @@ function NeoDashboardPage() {
     }),
     [rows],
   );
-  const meses = useMemo(makeMonthOptions, []);
 
   if (query.isLoading) {
     return <LoadingState title="Carregando Dashboard Neo…" />;
@@ -185,14 +197,13 @@ function NeoDashboardPage() {
               </label>
             )}
             <label className="grid min-w-52 gap-1.5 text-xs font-medium text-foreground">
-              Mês
-              <Select value={mes} onValueChange={setMes}>
-                <SelectTrigger aria-label="Mês">
+              Período
+              <Select value={periodo} onValueChange={(v) => setPeriodo(v as Periodo)}>
+                <SelectTrigger aria-label="Período">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os meses</SelectItem>
-                  {meses.map((option) => (
+                  {PERIODO_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -216,20 +227,23 @@ function NeoDashboardPage() {
         <EmptyState
           className="mt-6"
           title="Nenhum Registro Neo encontrado"
-          description="Não existem registros para o mês selecionado."
+          description="Não existem registros para o período selecionado."
         />
       ) : (
-        <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <NeoBarChart title="Registros por tipo" data={charts.tipo} colorMap={TYPE_COLORS} />
-          <NeoBarChart title="Registros por esteira" data={charts.esteira} />
-          <NeoBarChart title="Registros por status" data={charts.status} />
-          <NeoBarChart
-            title="Escalonamentos"
-            data={charts.escalonamentos}
-            emptyMessage="Nenhum registro escalonado no período."
-          />
-          <EvolutionChart data={charts.evolucao} />
-        </section>
+        <>
+          <CoberturaSection cobertura={cobertura} />
+          <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <NeoBarChart title="Registros por tipo" data={charts.tipo} colorMap={TYPE_COLORS} />
+            <NeoBarChart title="Registros por esteira" data={charts.esteira} />
+            <NeoBarChart title="Registros por status" data={charts.status} />
+            <NeoBarChart
+              title="Escalonamentos"
+              data={charts.escalonamentos}
+              emptyMessage="Nenhum registro escalonado no período."
+            />
+            <EvolutionChart data={charts.evolucao} />
+          </section>
+        </>
       )}
     </>
   );
@@ -437,31 +451,67 @@ function evolutionByMonth(rows: NeoRow[]): ChartDatum[] {
     });
 }
 
-function currentMonth() {
+function periodBounds(periodo: Periodo) {
+  const months = PERIODO_OPTIONS.find((p) => p.value === periodo)?.months ?? 3;
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+  return { start: start.toISOString(), end: end.toISOString() };
 }
 
-function monthBounds(value: string) {
-  const [year, month] = value.split("-").map(Number);
-  const nextYear = month === 12 ? year + 1 : year;
-  const nextMonth = month === 12 ? 1 : month + 1;
-  return {
-    start: new Date(`${year}-${String(month).padStart(2, "0")}-01T00:00:00`).toISOString(),
-    end: new Date(`${nextYear}-${String(nextMonth).padStart(2, "0")}-01T00:00:00`).toISOString(),
-  };
-}
-
-function makeMonthOptions() {
-  const now = new Date();
-  return Array.from({ length: 24 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
-    return {
-      value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
-      label: date.toLocaleDateString("pt-BR", {
-        month: "long",
-        year: "numeric",
-      }),
-    };
+function calculateCobertura(rows: NeoRow[]): CoberturaData {
+  const normalize = (v: string) => v.trim().toLocaleLowerCase("pt-BR");
+  const filtered = rows.filter((r) =>
+    ESTEIRA_COMPARATIVO.some((e) => normalize(e) === normalize(r.esteira ?? "")),
+  );
+  const total = filtered.length;
+  const itens = ESTEIRA_COMPARATIVO.map((nome) => {
+    const quantidade = filtered.filter((r) => normalize(r.esteira ?? "") === normalize(nome)).length;
+    const percentual = total > 0 ? (quantidade / total) * 100 : 0;
+    return { nome, quantidade, percentual };
   });
+  return { total, itens };
+}
+
+type CoberturaData = {
+  total: number;
+  itens: { nome: string; quantidade: number; percentual: number }[];
+};
+
+function CoberturaSection({ cobertura }: { cobertura: CoberturaData }) {
+  const chartData: ChartDatum[] = cobertura.itens.map((i) => ({
+    nome: i.nome,
+    quantidade: i.quantidade,
+  }));
+  return (
+    <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+      {cobertura.itens.map((item) => (
+        <article key={item.nome} className="rounded-md border border-border bg-background p-5">
+          <div className="flex items-start justify-between gap-3">
+            <span className="text-sm text-muted-foreground">{item.nome}</span>
+            <span
+              className="flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-xs font-semibold text-white"
+              style={{ backgroundColor: ESTEIRA_COLORS[item.nome] ?? "var(--primary)" }}
+            >
+              {item.percentual.toFixed(1)}%
+            </span>
+          </div>
+          <p className="mt-4 text-2xl font-semibold tabular-nums text-foreground">
+            {item.quantidade.toLocaleString("pt-BR")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            de {cobertura.total.toLocaleString("pt-BR")} registros comparáveis no período
+          </p>
+        </article>
+      ))}
+      <div className="xl:col-span-1">
+        <NeoBarChart
+          title="Comparativo de cobertura"
+          data={chartData}
+          colorMap={ESTEIRA_COLORS}
+          emptyMessage="Sem registros de contato realizado ou sem sucesso."
+        />
+      </div>
+    </section>
+  );
 }
