@@ -227,20 +227,23 @@ function NeoDashboardPage() {
         <EmptyState
           className="mt-6"
           title="Nenhum Registro Neo encontrado"
-          description="Não existem registros para o mês selecionado."
+          description="Não existem registros para o período selecionado."
         />
       ) : (
-        <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <NeoBarChart title="Registros por tipo" data={charts.tipo} colorMap={TYPE_COLORS} />
-          <NeoBarChart title="Registros por esteira" data={charts.esteira} />
-          <NeoBarChart title="Registros por status" data={charts.status} />
-          <NeoBarChart
-            title="Escalonamentos"
-            data={charts.escalonamentos}
-            emptyMessage="Nenhum registro escalonado no período."
-          />
-          <EvolutionChart data={charts.evolucao} />
-        </section>
+        <>
+          <CoberturaSection cobertura={cobertura} />
+          <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <NeoBarChart title="Registros por tipo" data={charts.tipo} colorMap={TYPE_COLORS} />
+            <NeoBarChart title="Registros por esteira" data={charts.esteira} />
+            <NeoBarChart title="Registros por status" data={charts.status} />
+            <NeoBarChart
+              title="Escalonamentos"
+              data={charts.escalonamentos}
+              emptyMessage="Nenhum registro escalonado no período."
+            />
+            <EvolutionChart data={charts.evolucao} />
+          </section>
+        </>
       )}
     </>
   );
