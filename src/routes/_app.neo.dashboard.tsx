@@ -81,17 +81,16 @@ function NeoDashboardPage() {
   const { role, user } = useAuth();
   const queryClient = useQueryClient();
   const [periodo, setPeriodo] = useState<Periodo>("mensal");
-  const [analista, setAnalista] = useState("all");
-  const canFilterAnalyst = role === "coordenador" || role === "administrador";
+  const [responsavel, setResponsavel] = useState("all");
+  const canFilterResponsavel = role === "coordenador" || role === "administrador";
 
-  const analystsQuery = useQuery({
-    queryKey: ["dashboard-neo-analysts"],
-    enabled: canFilterAnalyst,
+  const responsaveisQuery = useQuery({
+    queryKey: ["dashboard-neo-responsaveis"],
+    enabled: canFilterResponsavel,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, nome")
-        .eq("role", "analyst")
         .eq("ativo", true)
         .is("deleted_at", null)
         .order("nome");
@@ -101,7 +100,7 @@ function NeoDashboardPage() {
   });
 
   const query = useQuery({
-    queryKey: ["dashboard-neo", periodo, canFilterAnalyst ? analista : "own"],
+    queryKey: ["dashboard-neo", periodo, canFilterResponsavel ? responsavel : "own"],
     enabled: Boolean(user.id),
     queryFn: async () => {
       const { start, end } = periodBounds(periodo);
@@ -112,8 +111,8 @@ function NeoDashboardPage() {
         .gte("data_contato", start)
         .lt("data_contato", end);
 
-      if (canFilterAnalyst && analista !== "all") {
-        request = request.eq("responsavel_id", analista);
+      if (canFilterResponsavel && responsavel !== "all") {
+        request = request.eq("responsavel_id", responsavel);
       }
 
       const { data, error } = await request.order("data_contato", {
@@ -179,16 +178,16 @@ function NeoDashboardPage() {
         }
         actions={
           <div className="flex flex-wrap items-end gap-3">
-            {canFilterAnalyst && (
+            {canFilterResponsavel && (
               <label className="grid min-w-52 gap-1.5 text-xs font-medium text-foreground">
-                Analista
-                <Select value={analista} onValueChange={setAnalista}>
-                  <SelectTrigger aria-label="Analista">
+                Responsável
+                <Select value={responsavel} onValueChange={setResponsavel}>
+                  <SelectTrigger aria-label="Responsável">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos os analistas</SelectItem>
-                    {(analystsQuery.data ?? []).map((option) => (
+                    <SelectItem value="all">Todos os responsáveis</SelectItem>
+                    {(responsaveisQuery.data ?? []).map((option) => (
                       <SelectItem key={option.id} value={option.id}>
                         {option.nome}
                       </SelectItem>

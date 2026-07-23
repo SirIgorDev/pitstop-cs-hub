@@ -121,7 +121,6 @@ function AdministracaoPage() {
 
 function UsersPanel() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const query = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
@@ -159,6 +158,10 @@ function UsersPanel() {
   if (query.isError)
     return <ErrorState title="Erro ao carregar usuários" description={query.error.message} />;
 
+  const activeAdminCount = (query.data ?? []).filter(
+    (profile) => profile.role === "admin" && profile.ativo,
+  ).length;
+
   return (
     <div className="overflow-hidden rounded-md border border-border bg-background">
       <Table>
@@ -171,62 +174,72 @@ function UsersPanel() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {(query.data ?? []).map((profile) => (
-            <TableRow key={profile.id}>
-              <TableCell className="font-medium">{profile.nome}</TableCell>
-              <TableCell className="text-muted-foreground">{profile.email}</TableCell>
-              <TableCell>
-                <Select
-                  value={profile.role}
-                  disabled={mutation.isPending}
-                  onValueChange={(nextRole) =>
-                    mutation.mutate({
-                      id: profile.id,
-                      role: nextRole as DbRole,
-                      ativo: profile.ativo,
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-44" aria-label={`Perfil de ${profile.nome}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(ROLE_LABEL) as DbRole[]).map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {ROLE_LABEL[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={profile.ativo}
-                    disabled={mutation.isPending || profile.id === user.id}
-                    aria-label={`${profile.ativo ? "Inativar" : "Ativar"} ${profile.nome}`}
-                    onCheckedChange={(ativo) =>
+          {(query.data ?? []).map((profile) => {
+            const isOnlyActiveAdmin =
+              profile.role === "admin" && profile.ativo && activeAdminCount === 1;
+
+            return (
+              <TableRow key={profile.id}>
+                <TableCell className="font-medium">{profile.nome}</TableCell>
+                <TableCell className="text-muted-foreground">{profile.email}</TableCell>
+                <TableCell>
+                  <Select
+                    value={profile.role}
+                    disabled={mutation.isPending || isOnlyActiveAdmin}
+                    onValueChange={(nextRole) =>
                       mutation.mutate({
                         id: profile.id,
-                        role: profile.role,
-                        ativo,
+                        role: nextRole as DbRole,
+                        ativo: profile.ativo,
                       })
                     }
-                  />
-                  <Badge
-                    variant="outline"
-                    className={
-                      profile.ativo
-                        ? "border-success/30 bg-success/5 text-success"
-                        : "border-border bg-muted text-muted-foreground"
-                    }
                   >
-                    {profile.ativo ? "Ativo" : "Inativo"}
-                  </Badge>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+                    <SelectTrigger className="w-44" aria-label={`Perfil de ${profile.nome}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(ROLE_LABEL) as DbRole[]).map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {ROLE_LABEL[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={profile.ativo}
+                      disabled={mutation.isPending || isOnlyActiveAdmin}
+                      aria-label={`${profile.ativo ? "Inativar" : "Ativar"} ${profile.nome}`}
+                      title={
+                        isOnlyActiveAdmin
+                          ? "É necessário manter pelo menos um administrador ativo"
+                          : undefined
+                      }
+                      onCheckedChange={(ativo) =>
+                        mutation.mutate({
+                          id: profile.id,
+                          role: profile.role,
+                          ativo,
+                        })
+                      }
+                    />
+                    <Badge
+                      variant="outline"
+                      className={
+                        profile.ativo
+                          ? "border-success/30 bg-success/5 text-success"
+                          : "border-border bg-muted text-muted-foreground"
+                      }
+                    >
+                      {profile.ativo ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
