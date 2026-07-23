@@ -31,6 +31,7 @@ type Registro = {
   nome_cliente: string;
   telefone: string | null;
   tipo: string;
+  canal_atendimento: string;
   esteira: string;
   status: string;
   escalonou_para: string | null;
@@ -50,6 +51,7 @@ const emptyReg = (uid: string): Registro => ({
   nome_cliente: "",
   telefone: "",
   tipo: "Reativo",
+  canal_atendimento: "meet",
   esteira: "1° Contato",
   status: "Aberto",
   escalonou_para: null,
@@ -73,6 +75,7 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
       if (seed.data_contato && seed.data_contato.length > 16) {
         seed.data_contato = seed.data_contato.slice(0, 16);
       }
+      if (!seed.canal_atendimento) seed.canal_atendimento = "meet";
       setForm(seed);
     }
   }, [open, initial, user.id]);
@@ -110,6 +113,32 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
       return data;
     },
   });
+
+  const canaisQ = useQuery({
+    queryKey: ["canal_atendimento_options"],
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("canal_atendimento_options")
+        .select("id, nome, ativo, ordem")
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .order("ordem");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (!open || isEdit || !canaisQ.data?.length) return;
+    setForm((current) =>
+      canaisQ.data.some((option) => option.nome === current.canal_atendimento)
+        ? current
+        : { ...current, canal_atendimento: canaisQ.data[0].nome },
+    );
+  }, [canaisQ.data, isEdit, open]);
 
   useEffect(() => {
     if (!open || isEdit || !esteirasQ.data?.length) return;
@@ -255,6 +284,30 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
                     {t}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field label="Canal de atendimento" required>
+            <Select
+              value={form.canal_atendimento}
+              onValueChange={(v) => setForm({ ...form, canal_atendimento: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {(canaisQ.data ?? []).map((canal) => (
+                  <SelectItem key={canal.id} value={canal.nome}>
+                    {canal.nome}
+                  </SelectItem>
+                ))}
+                {isEdit && form.canal_atendimento &&
+                  !(canaisQ.data ?? []).some((canal) => canal.nome === form.canal_atendimento) && (
+                    <SelectItem value={form.canal_atendimento}>
+                      {form.canal_atendimento} (inativo)
+                    </SelectItem>
+                  )}
               </SelectContent>
             </Select>
           </Field>
