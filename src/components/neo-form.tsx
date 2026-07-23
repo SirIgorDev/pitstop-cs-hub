@@ -47,7 +47,7 @@ interface Props {
 
 const emptyReg = (uid: string): Registro => ({
   protocolo_neo: "",
-  data_contato: new Date().toISOString().slice(0, 16),
+  data_contato: formatDateInput(new Date()),
   nome_cliente: "",
   telefone: "",
   tipo: "Reativo",
@@ -71,9 +71,8 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
       const seed = initial
         ? ({ ...emptyReg(user.id), ...initial } as Registro)
         : emptyReg(user.id);
-      // datetime-local aceita YYYY-MM-DDTHH:mm
-      if (seed.data_contato && seed.data_contato.length > 16) {
-        seed.data_contato = seed.data_contato.slice(0, 16);
+      if (seed.data_contato) {
+        seed.data_contato = formatDateInput(new Date(seed.data_contato));
       }
       if (!seed.canal_atendimento) seed.canal_atendimento = "meet";
       setForm(seed);
@@ -184,8 +183,8 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
     mutationFn: async (payload: Registro) => {
       const next = { ...payload };
       if (!canPickResponsavel) next.responsavel_id = user.id;
-      // Converter datetime-local → ISO
-      const dataIso = new Date(next.data_contato).toISOString();
+      // O banco mantém timestamp, mas o usuário informa somente a data.
+      const dataIso = new Date(`${next.data_contato}T00:00:00`).toISOString();
       const record = { ...next, data_contato: dataIso };
 
       if (isEdit && initial?.id) {
@@ -244,7 +243,7 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
 
           <Field label="Data do contato" required>
             <Input
-              type="datetime-local"
+              type="date"
               value={form.data_contato}
               onChange={(e) => setForm({ ...form, data_contato: e.target.value })}
               required
@@ -420,6 +419,13 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
       </DialogContent>
     </Dialog>
   );
+}
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function Field({

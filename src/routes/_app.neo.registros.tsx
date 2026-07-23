@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDownUp, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,7 @@ function NeoRegistrosPage() {
   const [esteira, setEsteira] = useState("all");
   const [status, setStatus] = useState("all");
   const [responsavel, setResponsavel] = useState("all");
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -115,7 +116,7 @@ function NeoRegistrosPage() {
   });
 
   const query = useQuery({
-    queryKey: ["registros_neo", { search, mes, tipo, canal, esteira, status, responsavel, page }],
+    queryKey: ["registros_neo", { search, mes, tipo, canal, esteira, status, responsavel, order, page }],
     queryFn: async () => {
       let q = supabase
         .from("registros_neo")
@@ -143,7 +144,7 @@ function NeoRegistrosPage() {
 
       const from = (page - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-      q = q.order("data_contato", { ascending: false }).range(from, to);
+      q = q.order("data_contato", { ascending: order === "asc" }).range(from, to);
 
       const { data, error, count } = await q;
       if (error) throw error;
@@ -182,6 +183,56 @@ function NeoRegistrosPage() {
 
   const total = query.data?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function exportCsv() {
+    const rows = query.data?.data ?? [];
+    if (rows.length === 0) return toast.error("Nada para exportar");
+
+    const headers = [
+      "ID",
+      "Protocolo Neo",
+      "Data do contato",
+      "Cliente",
+      "Telefone",
+      "Tipo",
+      "Canal de atendimento",
+      "Esteira",
+      "Status",
+      "Escalonou para",
+      "Observação",
+    ];
+    const lines = [headers.join(";")];
+
+    for (const row of rows) {
+      lines.push(
+        [
+          row.id,
+          row.protocolo_neo,
+          formatDisplayDate(row.data_contato),
+          row.nome_cliente,
+          row.telefone ?? "",
+          row.tipo,
+          row.canal_atendimento ?? "",
+          row.esteira,
+          row.status,
+          row.escalonou_para ?? "",
+          row.observacao ?? "",
+        ]
+          .map((value) => `"${String(value).replace(/"/g, '""').replace(/[\r\n]+/g, " ")}"`)
+          .join(";"),
+      );
+    }
+
+    const blob = new Blob(["\ufeff" + lines.join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cadastro-neo-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <>
@@ -227,6 +278,19 @@ function NeoRegistrosPage() {
             options={[{ value: "all", label: "Todos responsáveis" }, ...(analystsQ.data ?? []).map((a) => ({ value: a.id, label: a.nome }))]}
           />
         )}
+        <Button
+          variant="outline"
+          onClick={() => {
+            setOrder(order === "desc" ? "asc" : "desc");
+            setPage(1);
+          }}
+        >
+          <ArrowDownUp className="mr-2 h-4 w-4" />
+          Data {order === "desc" ? "↓" : "↑"}
+        </Button>
+        <Button variant="outline" onClick={exportCsv}>
+          Exportar CSV
+        </Button>
       </div>
 
       {query.isLoading ? (
@@ -260,7 +324,7 @@ function NeoRegistrosPage() {
                   <TableRow key={r.id}>
                     <TableCell className="font-mono text-xs text-muted-foreground">{r.protocolo_neo}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(r.data_contato).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                      {formatDisplayDate(r.data_contato)}
                     </TableCell>
                     <TableCell className="font-medium text-foreground">{r.nome_cliente}</TableCell>
                     <TableCell className="text-muted-foreground">{r.tipo}</TableCell>
@@ -339,6 +403,10 @@ function NeoRegistrosPage() {
       </AlertDialog>
     </>
   );
+}
+
+function formatDisplayDate(value: string) {
+  return new Date(value).toLocaleDateString("pt-BR");
 }
 
 function FilterSelect({
