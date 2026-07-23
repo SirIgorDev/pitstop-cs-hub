@@ -9,23 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
-import { Route as AppLimparDocumentoRouteImport } from './routes/_app.limpar-documento'
-import { Route as AppGargalosRouteImport } from './routes/_app.gargalos'
-import { Route as AppAuditoriaRouteImport } from './routes/_app.auditoria'
 import { Route as AppAdministracaoRouteImport } from './routes/_app.administracao'
-import { Route as AppNeoRegistrosRouteImport } from './routes/_app.neo.registros'
+import { Route as AppAuditoriaRouteImport } from './routes/_app.auditoria'
+import { Route as AppGargalosRouteImport } from './routes/_app.gargalos'
+import { Route as AppLimparDocumentoRouteImport } from './routes/_app.limpar-documento'
 import { Route as AppNeoDashboardRouteImport } from './routes/_app.neo.dashboard'
+import { Route as AppNeoRegistrosRouteImport } from './routes/_app.neo.registros'
 
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -33,14 +33,9 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppLimparDocumentoRoute = AppLimparDocumentoRouteImport.update({
-  id: '/limpar-documento',
-  path: '/limpar-documento',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppGargalosRoute = AppGargalosRouteImport.update({
-  id: '/gargalos',
-  path: '/gargalos',
+const AppAdministracaoRoute = AppAdministracaoRouteImport.update({
+  id: '/administracao',
+  path: '/administracao',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAuditoriaRoute = AppAuditoriaRouteImport.update({
@@ -48,19 +43,24 @@ const AppAuditoriaRoute = AppAuditoriaRouteImport.update({
   path: '/auditoria',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAdministracaoRoute = AppAdministracaoRouteImport.update({
-  id: '/administracao',
-  path: '/administracao',
+const AppGargalosRoute = AppGargalosRouteImport.update({
+  id: '/gargalos',
+  path: '/gargalos',
   getParentRoute: () => AppRoute,
 } as any)
-const AppNeoRegistrosRoute = AppNeoRegistrosRouteImport.update({
-  id: '/neo/registros',
-  path: '/neo/registros',
+const AppLimparDocumentoRoute = AppLimparDocumentoRouteImport.update({
+  id: '/limpar-documento',
+  path: '/limpar-documento',
   getParentRoute: () => AppRoute,
 } as any)
 const AppNeoDashboardRoute = AppNeoDashboardRouteImport.update({
   id: '/neo/dashboard',
   path: '/neo/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNeoRegistrosRoute = AppNeoRegistrosRouteImport.update({
+  id: '/neo/registros',
+  path: '/neo/registros',
   getParentRoute: () => AppRoute,
 } as any)
 
@@ -137,18 +137,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_app': {
       id: '/_app'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -158,18 +158,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/limpar-documento': {
-      id: '/_app/limpar-documento'
-      path: '/limpar-documento'
-      fullPath: '/limpar-documento'
-      preLoaderRoute: typeof AppLimparDocumentoRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/gargalos': {
-      id: '/_app/gargalos'
-      path: '/gargalos'
-      fullPath: '/gargalos'
-      preLoaderRoute: typeof AppGargalosRouteImport
+    '/_app/administracao': {
+      id: '/_app/administracao'
+      path: '/administracao'
+      fullPath: '/administracao'
+      preLoaderRoute: typeof AppAdministracaoRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/auditoria': {
@@ -179,18 +172,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAuditoriaRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/administracao': {
-      id: '/_app/administracao'
-      path: '/administracao'
-      fullPath: '/administracao'
-      preLoaderRoute: typeof AppAdministracaoRouteImport
+    '/_app/gargalos': {
+      id: '/_app/gargalos'
+      path: '/gargalos'
+      fullPath: '/gargalos'
+      preLoaderRoute: typeof AppGargalosRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/neo/registros': {
-      id: '/_app/neo/registros'
-      path: '/neo/registros'
-      fullPath: '/neo/registros'
-      preLoaderRoute: typeof AppNeoRegistrosRouteImport
+    '/_app/limpar-documento': {
+      id: '/_app/limpar-documento'
+      path: '/limpar-documento'
+      fullPath: '/limpar-documento'
+      preLoaderRoute: typeof AppLimparDocumentoRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/neo/dashboard': {
@@ -198,6 +191,13 @@ declare module '@tanstack/react-router' {
       path: '/neo/dashboard'
       fullPath: '/neo/dashboard'
       preLoaderRoute: typeof AppNeoDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/neo/registros': {
+      id: '/_app/neo/registros'
+      path: '/neo/registros'
+      fullPath: '/neo/registros'
+      preLoaderRoute: typeof AppNeoRegistrosRouteImport
       parentRoute: typeof AppRoute
     }
   }
