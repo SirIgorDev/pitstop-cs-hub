@@ -47,6 +47,39 @@ export type Database = {
         }
         Relationships: []
       }
+      canal_atendimento_options: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          deleted_at: string | null
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          nome: string
+          ordem?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       categoria_gargalo_options: {
         Row: {
           ativo: boolean
@@ -297,6 +330,7 @@ export type Database = {
       }
       registros_neo: {
         Row: {
+          canal_atendimento: string | null
           created_at: string
           created_by: string | null
           data_contato: string
@@ -315,6 +349,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          canal_atendimento?: string | null
           created_at?: string
           created_by?: string | null
           data_contato?: string
@@ -333,6 +368,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          canal_atendimento?: string | null
           created_at?: string
           created_by?: string | null
           data_contato?: string
@@ -351,6 +387,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "registros_neo_canal_atendimento_option_fk"
+            columns: ["canal_atendimento"]
+            isOneToOne: false
+            referencedRelation: "canal_atendimento_options"
+            referencedColumns: ["nome"]
+          },
           {
             foreignKeyName: "registros_neo_esteira_option_fk"
             columns: ["esteira"]
