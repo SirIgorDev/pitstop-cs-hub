@@ -451,31 +451,67 @@ function evolutionByMonth(rows: NeoRow[]): ChartDatum[] {
     });
 }
 
-function currentMonth() {
+function periodBounds(periodo: Periodo) {
+  const months = PERIODO_OPTIONS.find((p) => p.value === periodo)?.months ?? 3;
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+  return { start: start.toISOString(), end: end.toISOString() };
 }
 
-function monthBounds(value: string) {
-  const [year, month] = value.split("-").map(Number);
-  const nextYear = month === 12 ? year + 1 : year;
-  const nextMonth = month === 12 ? 1 : month + 1;
-  return {
-    start: new Date(`${year}-${String(month).padStart(2, "0")}-01T00:00:00`).toISOString(),
-    end: new Date(`${nextYear}-${String(nextMonth).padStart(2, "0")}-01T00:00:00`).toISOString(),
-  };
-}
-
-function makeMonthOptions() {
-  const now = new Date();
-  return Array.from({ length: 24 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
-    return {
-      value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
-      label: date.toLocaleDateString("pt-BR", {
-        month: "long",
-        year: "numeric",
-      }),
-    };
+function calculateCobertura(rows: NeoRow[]): CoberturaData {
+  const normalize = (v: string) => v.trim().toLocaleLowerCase("pt-BR");
+  const filtered = rows.filter((r) =>
+    ESTEIRA_COMPARATIVO.some((e) => normalize(e) === normalize(r.esteira ?? "")),
+  );
+  const total = filtered.length;
+  const itens = ESTEIRA_COMPARATIVO.map((nome) => {
+    const quantidade = filtered.filter((r) => normalize(r.esteira ?? "") === normalize(nome)).length;
+    const percentual = total > 0 ? (quantidade / total) * 100 : 0;
+    return { nome, quantidade, percentual };
   });
+  return { total, itens };
+}
+
+type CoberturaData = {
+  total: number;
+  itens: { nome: string; quantidade: number; percentual: number }[];
+};
+
+function CoberturaSection({ cobertura }: { cobertura: CoberturaData }) {
+  const chartData: ChartDatum[] = cobertura.itens.map((i) => ({
+    nome: i.nome,
+    quantidade: i.quantidade,
+  }));
+  return (
+    <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+      {cobertura.itens.map((item) => (
+        <article key={item.nome} className="rounded-md border border-border bg-background p-5">
+          <div className="flex items-start justify-between gap-3">
+            <span className="text-sm text-muted-foreground">{item.nome}</span>
+            <span
+              className="flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-xs font-semibold text-white"
+              style={{ backgroundColor: ESTEIRA_COLORS[item.nome] ?? "var(--primary)" }}
+            >
+              {item.percentual.toFixed(1)}%
+            </span>
+          </div>
+          <p className="mt-4 text-2xl font-semibold tabular-nums text-foreground">
+            {item.quantidade.toLocaleString("pt-BR")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            de {cobertura.total.toLocaleString("pt-BR")} registros comparáveis no período
+          </p>
+        </article>
+      ))}
+      <div className="xl:col-span-1">
+        <NeoBarChart
+          title="Comparativo de cobertura"
+          data={chartData}
+          colorMap={ESTEIRA_COLORS}
+          emptyMessage="Sem registros de contato realizado ou sem sucesso."
+        />
+      </div>
+    </section>
+  );
 }
