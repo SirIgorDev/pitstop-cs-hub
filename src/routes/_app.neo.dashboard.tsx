@@ -62,10 +62,24 @@ const TYPE_COLORS: Record<string, string> = {
   Reativo: "#f97316",
 };
 
+type Periodo = "trimestral" | "semestral" | "anual";
+
+const PERIODO_OPTIONS: { value: Periodo; label: string; months: number }[] = [
+  { value: "trimestral", label: "Trimestral (últimos 3 meses)", months: 3 },
+  { value: "semestral", label: "Semestral (últimos 6 meses)", months: 6 },
+  { value: "anual", label: "Anual (últimos 12 meses)", months: 12 },
+];
+
+const ESTEIRA_COMPARATIVO = ["Contato realizado", "Contato sem sucesso"] as const;
+const ESTEIRA_COLORS: Record<string, string> = {
+  "Contato realizado": "#16a34a",
+  "Contato sem sucesso": "#dc2626",
+};
+
 function NeoDashboardPage() {
   const { role, user } = useAuth();
   const queryClient = useQueryClient();
-  const [mes, setMes] = useState(currentMonth());
+  const [periodo, setPeriodo] = useState<Periodo>("trimestral");
   const [analista, setAnalista] = useState("all");
   const canFilterAnalyst = role === "coordenador" || role === "administrador";
 
@@ -86,18 +100,16 @@ function NeoDashboardPage() {
   });
 
   const query = useQuery({
-    queryKey: ["dashboard-neo", mes, canFilterAnalyst ? analista : "own"],
+    queryKey: ["dashboard-neo", periodo, canFilterAnalyst ? analista : "own"],
     enabled: Boolean(user.id),
     queryFn: async () => {
+      const { start, end } = periodBounds(periodo);
       let request = supabase
         .from("registros_neo")
         .select("data_contato, escalonou_para, esteira, nome_cliente, responsavel_id, status, tipo")
-        .is("deleted_at", null);
-
-      if (mes !== "all") {
-        const { start, end } = monthBounds(mes);
-        request = request.gte("data_contato", start).lt("data_contato", end);
-      }
+        .is("deleted_at", null)
+        .gte("data_contato", start)
+        .lt("data_contato", end);
 
       if (canFilterAnalyst && analista !== "all") {
         request = request.eq("responsavel_id", analista);
@@ -126,6 +138,7 @@ function NeoDashboardPage() {
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
   const metrics = useMemo(() => calculateMetrics(rows), [rows]);
+  const cobertura = useMemo(() => calculateCobertura(rows), [rows]);
   const charts = useMemo(
     () => ({
       tipo: groupBy(rows, (row) => row.tipo),
@@ -139,7 +152,6 @@ function NeoDashboardPage() {
     }),
     [rows],
   );
-  const meses = useMemo(makeMonthOptions, []);
 
   if (query.isLoading) {
     return <LoadingState title="Carregando Dashboard Neo…" />;
