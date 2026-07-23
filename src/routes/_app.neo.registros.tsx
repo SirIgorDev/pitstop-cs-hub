@@ -52,6 +52,7 @@ function NeoRegistrosPage() {
   const [search, setSearch] = useState("");
   const [mes, setMes] = useState("all");
   const [tipo, setTipo] = useState("all");
+  const [canal, setCanal] = useState("all");
   const [esteira, setEsteira] = useState("all");
   const [status, setStatus] = useState("all");
   const [responsavel, setResponsavel] = useState("all");
@@ -89,6 +90,20 @@ function NeoRegistrosPage() {
     },
   });
 
+  const canaisQ = useQuery({
+    queryKey: ["canal_atendimento_options", "all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("canal_atendimento_options")
+        .select("id, nome, ordem")
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .order("ordem");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const analystsQ = useQuery({
     queryKey: ["profiles_ativos_all"],
     enabled: role !== "analista",
@@ -100,12 +115,12 @@ function NeoRegistrosPage() {
   });
 
   const query = useQuery({
-    queryKey: ["registros_neo", { search, mes, tipo, esteira, status, responsavel, page }],
+    queryKey: ["registros_neo", { search, mes, tipo, canal, esteira, status, responsavel, page }],
     queryFn: async () => {
       let q = supabase
         .from("registros_neo")
         .select(
-          "id, protocolo_neo, data_contato, nome_cliente, telefone, tipo, esteira, status, escalonou_para, observacao, responsavel_id, created_by",
+          "id, protocolo_neo, data_contato, nome_cliente, telefone, tipo, canal_atendimento, esteira, status, escalonou_para, observacao, responsavel_id, created_by",
           { count: "exact" },
         )
         .is("deleted_at", null);
@@ -115,6 +130,7 @@ function NeoRegistrosPage() {
         q = q.or(`protocolo_neo.ilike.%${s}%,nome_cliente.ilike.%${s}%`);
       }
       if (tipo !== "all") q = q.eq("tipo", tipo as never);
+      if (canal !== "all") q = q.eq("canal_atendimento", canal);
       if (esteira !== "all") q = q.eq("esteira", esteira as never);
       if (status !== "all") q = q.eq("status", status);
       if (responsavel !== "all") q = q.eq("responsavel_id", responsavel);
@@ -200,6 +216,7 @@ function NeoRegistrosPage() {
         </div>
         <FilterSelect value={mes} onChange={(v) => { setMes(v); setPage(1); }} placeholder="Mês" options={[{ value: "all", label: "Todos os meses" }, ...meses]} />
         <FilterSelect value={tipo} onChange={(v) => { setTipo(v); setPage(1); }} placeholder="Tipo" options={[{ value: "all", label: "Todos tipos" }, ...TIPOS_NEO.map((s) => ({ value: s, label: s }))]} />
+        <FilterSelect value={canal} onChange={(v) => { setCanal(v); setPage(1); }} placeholder="Canal" options={[{ value: "all", label: "Todos os canais" }, ...(canaisQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
         <FilterSelect value={esteira} onChange={(v) => { setEsteira(v); setPage(1); }} placeholder="Esteira" options={[{ value: "all", label: "Todas esteiras" }, ...(esteirasQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
         <FilterSelect value={status} onChange={(v) => { setStatus(v); setPage(1); }} placeholder="Status" options={[{ value: "all", label: "Todos status" }, ...(statusQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
         {role !== "analista" && (
@@ -231,6 +248,7 @@ function NeoRegistrosPage() {
                   <TableHead>Data</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead>Canal</TableHead>
                   <TableHead>Esteira</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Escalonou</TableHead>
@@ -246,6 +264,7 @@ function NeoRegistrosPage() {
                     </TableCell>
                     <TableCell className="font-medium text-foreground">{r.nome_cliente}</TableCell>
                     <TableCell className="text-muted-foreground">{r.tipo}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.canal_atendimento ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{r.esteira}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="border-border bg-muted text-foreground">
