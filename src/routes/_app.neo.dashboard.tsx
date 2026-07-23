@@ -62,9 +62,10 @@ const TYPE_COLORS: Record<string, string> = {
   Reativo: "#f97316",
 };
 
-type Periodo = "trimestral" | "semestral" | "anual";
+type Periodo = "mensal" | "trimestral" | "semestral" | "anual";
 
 const PERIODO_OPTIONS: { value: Periodo; label: string; months: number }[] = [
+  { value: "mensal", label: "Mensal (mês atual)", months: 1 },
   { value: "trimestral", label: "Trimestral (últimos 3 meses)", months: 3 },
   { value: "semestral", label: "Semestral (últimos 6 meses)", months: 6 },
   { value: "anual", label: "Anual (últimos 12 meses)", months: 12 },
@@ -79,7 +80,7 @@ const ESTEIRA_COLORS: Record<string, string> = {
 function NeoDashboardPage() {
   const { role, user } = useAuth();
   const queryClient = useQueryClient();
-  const [periodo, setPeriodo] = useState<Periodo>("trimestral");
+  const [periodo, setPeriodo] = useState<Periodo>("mensal");
   const [analista, setAnalista] = useState("all");
   const canFilterAnalyst = role === "coordenador" || role === "administrador";
 
@@ -452,7 +453,7 @@ function evolutionByMonth(rows: NeoRow[]): ChartDatum[] {
 }
 
 function periodBounds(periodo: Periodo) {
-  const months = PERIODO_OPTIONS.find((p) => p.value === periodo)?.months ?? 3;
+  const months = PERIODO_OPTIONS.find((p) => p.value === periodo)?.months ?? 1;
   const now = new Date();
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
