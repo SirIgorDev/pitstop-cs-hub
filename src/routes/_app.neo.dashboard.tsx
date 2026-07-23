@@ -197,14 +197,13 @@ function NeoDashboardPage() {
               </label>
             )}
             <label className="grid min-w-52 gap-1.5 text-xs font-medium text-foreground">
-              Mês
-              <Select value={mes} onValueChange={setMes}>
-                <SelectTrigger aria-label="Mês">
+              Período
+              <Select value={periodo} onValueChange={(v) => setPeriodo(v as Periodo)}>
+                <SelectTrigger aria-label="Período">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os meses</SelectItem>
-                  {meses.map((option) => (
+                  {PERIODO_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
