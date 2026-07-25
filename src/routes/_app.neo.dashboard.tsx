@@ -31,6 +31,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/state-views";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/mock-role";
+import { monthBounds } from "@/lib/date";
 
 export const Route = createFileRoute("/_app/neo/dashboard")({
   component: NeoDashboardPage,
@@ -433,8 +434,7 @@ function groupBy(rows: NeoRow[], getKey: (row: NeoRow) => string): ChartDatum[] 
 function evolutionByMonth(rows: NeoRow[]): ChartDatum[] {
   const counts = new Map<string, number>();
   for (const row of rows) {
-    const date = new Date(row.data_contato);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const key = row.data_contato.slice(0, 7);
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return [...counts.entries()]
@@ -454,9 +454,10 @@ function evolutionByMonth(rows: NeoRow[]): ChartDatum[] {
 function periodBounds(periodo: Periodo) {
   const months = PERIODO_OPTIONS.find((p) => p.value === periodo)?.months ?? 1;
   const now = new Date();
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
-  return { start: start.toISOString(), end: end.toISOString() };
+  const startDate = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+  const { start } = monthBounds(startDate.getFullYear(), startDate.getMonth() + 1);
+  const { end } = monthBounds(now.getFullYear(), now.getMonth() + 1);
+  return { start, end };
 }
 
 function calculateCobertura(rows: NeoRow[]): CoberturaData {

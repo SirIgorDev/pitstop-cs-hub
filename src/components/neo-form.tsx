@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TIPOS_NEO, maskPhone } from "@/lib/constants";
+import { currentAppDate } from "@/lib/date";
 
 type Registro = {
   id?: string;
@@ -47,7 +48,7 @@ interface Props {
 
 const emptyReg = (uid: string): Registro => ({
   protocolo_neo: "",
-  data_contato: currentDateInput(),
+  data_contato: currentAppDate(),
   nome_cliente: "",
   telefone: "",
   tipo: "Reativo",
@@ -72,7 +73,7 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
         ? ({ ...emptyReg(user.id), ...initial } as Registro)
         : emptyReg(user.id);
       if (seed.data_contato) {
-        seed.data_contato = formatDateInput(new Date(seed.data_contato));
+        seed.data_contato = seed.data_contato.slice(0, 10);
       }
       if (!seed.canal_atendimento) seed.canal_atendimento = "meet";
       setForm(seed);
@@ -183,9 +184,7 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
     mutationFn: async (payload: Registro) => {
       const next = { ...payload };
       if (!canPickResponsavel) next.responsavel_id = user.id;
-      // O banco mantém timestamp, mas o usuário informa somente a data.
-      const dataIso = new Date(`${next.data_contato}T00:00:00`).toISOString();
-      const record = { ...next, data_contato: dataIso };
+      const record = { ...next, data_contato: next.data_contato.slice(0, 10) };
 
       if (isEdit && initial?.id) {
         const { error } = await supabase
@@ -419,17 +418,6 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
       </DialogContent>
     </Dialog>
   );
-}
-
-function formatDateInput(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function currentDateInput() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function Field({
