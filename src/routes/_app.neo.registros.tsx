@@ -37,6 +37,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/state-views";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/mock-role";
 import { TIPOS_NEO } from "@/lib/constants";
+import { formatDateOnly, monthBounds } from "@/lib/date";
 
 export const Route = createFileRoute("/_app/neo/registros")({
   component: NeoRegistrosPage,
@@ -137,8 +138,7 @@ function NeoRegistrosPage() {
       if (responsavel !== "all") q = q.eq("responsavel_id", responsavel);
       if (mes !== "all") {
         const [y, m] = mes.split("-").map(Number);
-        const start = new Date(y, m - 1, 1).toISOString();
-        const end = new Date(y, m, 1).toISOString();
+        const { start, end } = monthBounds(y, m);
         q = q.gte("data_contato", start).lt("data_contato", end);
       }
 
@@ -406,7 +406,7 @@ function NeoRegistrosPage() {
 }
 
 function formatDisplayDate(value: string) {
-  return new Date(value).toLocaleDateString("pt-BR");
+  return formatDateOnly(value);
 }
 
 function FilterSelect({

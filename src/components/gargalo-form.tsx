@@ -29,6 +29,7 @@ import {
   STATUS_GARGALO,
   URGENCIAS,
 } from "@/lib/constants";
+import { currentAppDate } from "@/lib/date";
 
 type Gargalo = {
   id?: string;
@@ -55,7 +56,7 @@ interface Props {
 }
 
 const empty = (uid: string): Gargalo => ({
-  data_registro: new Date().toISOString().slice(0, 10),
+  data_registro: currentAppDate(),
   cliente: "",
   segmento: "Corporativo",
   responsavel_id: uid,
@@ -157,7 +158,7 @@ export function GargaloForm({ open, onOpenChange, initial }: Props) {
 
       // Se status Resolvido e data_resolucao vazia, preencher com hoje
       if (next.status === "Resolvido" && !next.data_resolucao) {
-        next.data_resolucao = new Date().toISOString().slice(0, 10);
+        next.data_resolucao = currentAppDate();
       }
       if (next.status !== "Resolvido") {
         next.data_resolucao = null;
