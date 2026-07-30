@@ -187,8 +187,9 @@ export async function parseBaseFile(file: File): Promise<ParsedBaseFile> {
   }
 
   if (extension === "xlsx") {
-    const { default: readXlsxFile } = await import("read-excel-file/browser");
-    const parsed = parseBaseMatrix((await readXlsxFile(file)) as unknown as CellValue[][]);
+    const { readSheet } = await import("read-excel-file/browser");
+    const matrix = (await readSheet(file)) as unknown as CellValue[][];
+    const parsed = parseBaseMatrix(matrix);
     return { ...parsed, format: "xlsx" };
   }
 
