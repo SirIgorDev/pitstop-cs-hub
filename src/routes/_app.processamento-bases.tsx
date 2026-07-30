@@ -11,7 +11,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
@@ -44,6 +44,11 @@ import {
   type PhoneSource,
   type RawBaseRow,
 } from "@/lib/base-processing";
+import {
+  createGoogleSpreadsheet,
+  prepareGoogleIdentity,
+  requestGoogleAccessToken,
+} from "@/lib/google-sheets-export";
 import { useAuth } from "@/lib/mock-role";
 
 export const Route = createFileRoute("/_app/processamento-bases")({
@@ -237,7 +242,14 @@ function ProcessamentoBasesPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [creatingSheet, setCreatingSheet] = useState(false);
   const canAccess = role === "analista_processos" || role === "administrador";
+
+  useEffect(() => {
+    if (import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+      void prepareGoogleIdentity().catch(() => undefined);
+    }
+  }, []);
 
   const currentQuery = useQuery({
     queryKey: ["process-import-current", user.id],
@@ -472,6 +484,43 @@ function ProcessamentoBasesPage() {
     }
   };
 
+  const createSheet = async () => {
+    if (!currentQuery.data) return;
+    setCreatingSheet(true);
+    try {
+      const accessToken = await requestGoogleAccessToken(
+        import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "",
+      );
+      const rows = await fetchGeneratedRows(currentQuery.data.id);
+      const values = [
+        ["CPF/CNPJ", "Cliente", "Nome", "Email", "Whatsapp"],
+        ...rows.map((row) => [
+          row.document_normalized ?? "",
+          row.client_name,
+          row.contact_name,
+          row.email,
+          row.whatsapp ?? "",
+        ]),
+      ];
+      const result = await createGoogleSpreadsheet(
+        accessToken,
+        `Base tratada - ${new Date().toLocaleDateString("pt-BR")}`,
+        values,
+      );
+      toast.success("Planilha criada no Google", {
+        description: `${rows.length} registros enviados para uma nova planilha.`,
+        action: {
+          label: "Abrir planilha",
+          onClick: () => window.open(result.spreadsheetUrl, "_blank", "noopener,noreferrer"),
+        },
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível criar a planilha");
+    } finally {
+      setCreatingSheet(false);
+    }
+  };
+
   return (
     <>
       <PageHeader
@@ -510,7 +559,7 @@ function ProcessamentoBasesPage() {
                 {formatDateTime(currentQuery.data.processed_at)}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={exportCurrent} disabled={exporting}>
                 {exporting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -518,6 +567,14 @@ function ProcessamentoBasesPage() {
                   <Download className="mr-2 h-4 w-4" />
                 )}
                 Exportar CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={createSheet} disabled={creatingSheet}>
+                {creatingSheet ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                )}
+                Criar planilha no Google
               </Button>
               <Button variant="outline" size="sm" onClick={deleteCurrent} disabled={deleting}>
                 {deleting ? (
