@@ -3,6 +3,7 @@ export type PhoneSource = "telefone3" | "telefone1" | "telefone2";
 export type PhoneStatus = "empty" | "invalid" | "fixed" | "valid_mobile";
 
 export interface RawBaseRow {
+  sourceRow?: number;
   documento: string | number | null | undefined;
   empresa: string | null | undefined;
   representante: string | null | undefined;
@@ -284,7 +285,7 @@ export function processBaseRows(rawRows: RawBaseRow[]): BaseProcessingResult {
     });
 
     analyzedRows.push({
-      sourceRow: index + 2,
+      sourceRow: raw.sourceRow ?? index + 2,
       document,
       raw,
       phones,

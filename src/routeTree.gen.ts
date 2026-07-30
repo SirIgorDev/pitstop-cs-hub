@@ -16,6 +16,7 @@ import { Route as AppAdministracaoRouteImport } from './routes/_app.administraca
 import { Route as AppAuditoriaRouteImport } from './routes/_app.auditoria'
 import { Route as AppGargalosRouteImport } from './routes/_app.gargalos'
 import { Route as AppLimparDocumentoRouteImport } from './routes/_app.limpar-documento'
+import { Route as AppProcessamentoBasesRouteImport } from './routes/_app.processamento-bases'
 import { Route as AppNeoDashboardRouteImport } from './routes/_app.neo.dashboard'
 import { Route as AppNeoRegistrosRouteImport } from './routes/_app.neo.registros'
 
@@ -53,6 +54,11 @@ const AppLimparDocumentoRoute = AppLimparDocumentoRouteImport.update({
   path: '/limpar-documento',
   getParentRoute: () => AppRoute,
 } as any)
+const AppProcessamentoBasesRoute = AppProcessamentoBasesRouteImport.update({
+  id: '/processamento-bases',
+  path: '/processamento-bases',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppNeoDashboardRoute = AppNeoDashboardRouteImport.update({
   id: '/neo/dashboard',
   path: '/neo/dashboard',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/auditoria': typeof AppAuditoriaRoute
   '/gargalos': typeof AppGargalosRoute
   '/limpar-documento': typeof AppLimparDocumentoRoute
+  '/processamento-bases': typeof AppProcessamentoBasesRoute
   '/neo/dashboard': typeof AppNeoDashboardRoute
   '/neo/registros': typeof AppNeoRegistrosRoute
 }
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/auditoria': typeof AppAuditoriaRoute
   '/gargalos': typeof AppGargalosRoute
   '/limpar-documento': typeof AppLimparDocumentoRoute
+  '/processamento-bases': typeof AppProcessamentoBasesRoute
   '/': typeof AppIndexRoute
   '/neo/dashboard': typeof AppNeoDashboardRoute
   '/neo/registros': typeof AppNeoRegistrosRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/_app/auditoria': typeof AppAuditoriaRoute
   '/_app/gargalos': typeof AppGargalosRoute
   '/_app/limpar-documento': typeof AppLimparDocumentoRoute
+  '/_app/processamento-bases': typeof AppProcessamentoBasesRoute
   '/_app/': typeof AppIndexRoute
   '/_app/neo/dashboard': typeof AppNeoDashboardRoute
   '/_app/neo/registros': typeof AppNeoRegistrosRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/auditoria'
     | '/gargalos'
     | '/limpar-documento'
+    | '/processamento-bases'
     | '/neo/dashboard'
     | '/neo/registros'
   fileRoutesByTo: FileRoutesByTo
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
     | '/auditoria'
     | '/gargalos'
     | '/limpar-documento'
+    | '/processamento-bases'
     | '/'
     | '/neo/dashboard'
     | '/neo/registros'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '/_app/auditoria'
     | '/_app/gargalos'
     | '/_app/limpar-documento'
+    | '/_app/processamento-bases'
     | '/_app/'
     | '/_app/neo/dashboard'
     | '/_app/neo/registros'
@@ -186,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLimparDocumentoRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/processamento-bases': {
+      id: '/_app/processamento-bases'
+      path: '/processamento-bases'
+      fullPath: '/processamento-bases'
+      preLoaderRoute: typeof AppProcessamentoBasesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/neo/dashboard': {
       id: '/_app/neo/dashboard'
       path: '/neo/dashboard'
@@ -208,6 +227,7 @@ interface AppRouteChildren {
   AppAuditoriaRoute: typeof AppAuditoriaRoute
   AppGargalosRoute: typeof AppGargalosRoute
   AppLimparDocumentoRoute: typeof AppLimparDocumentoRoute
+  AppProcessamentoBasesRoute: typeof AppProcessamentoBasesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppNeoDashboardRoute: typeof AppNeoDashboardRoute
   AppNeoRegistrosRoute: typeof AppNeoRegistrosRoute
@@ -218,6 +238,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAuditoriaRoute: AppAuditoriaRoute,
   AppGargalosRoute: AppGargalosRoute,
   AppLimparDocumentoRoute: AppLimparDocumentoRoute,
+  AppProcessamentoBasesRoute: AppProcessamentoBasesRoute,
   AppIndexRoute: AppIndexRoute,
   AppNeoDashboardRoute: AppNeoDashboardRoute,
   AppNeoRegistrosRoute: AppNeoRegistrosRoute,
@@ -232,3 +253,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

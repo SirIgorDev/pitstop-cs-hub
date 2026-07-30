@@ -699,6 +699,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      finalize_process_import: {
+        Args: { target_import_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
