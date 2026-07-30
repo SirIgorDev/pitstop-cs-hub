@@ -286,6 +286,248 @@ export type Database = {
         }
         Relationships: []
       }
+      process_exports: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          import_id: string
+          row_count: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          import_id: string
+          row_count: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          import_id?: string
+          row_count?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_exports_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "process_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      process_import_rows: {
+        Row: {
+          added_ninth_digit: boolean
+          client_name: string
+          contact_name: string
+          created_at: string
+          document_normalized: string | null
+          document_raw: string
+          email: string
+          id: string
+          import_id: string
+          outcome: string
+          phone_1: string
+          phone_2: string
+          phone_3: string
+          phone_source: string | null
+          source_row: number
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          added_ninth_digit?: boolean
+          client_name?: string
+          contact_name?: string
+          created_at?: string
+          document_normalized?: string | null
+          document_raw?: string
+          email?: string
+          id?: string
+          import_id: string
+          outcome?: string
+          phone_1?: string
+          phone_2?: string
+          phone_3?: string
+          phone_source?: string | null
+          source_row: number
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          added_ninth_digit?: boolean
+          client_name?: string
+          contact_name?: string
+          created_at?: string
+          document_normalized?: string | null
+          document_raw?: string
+          email?: string
+          id?: string
+          import_id?: string
+          outcome?: string
+          phone_1?: string
+          phone_2?: string
+          phone_3?: string
+          phone_source?: string | null
+          source_row?: number
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_import_rows_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "process_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      process_imports: {
+        Row: {
+          created_at: string
+          documents_without_whatsapp: number
+          duplicate_documents: number
+          duplicate_rows: number
+          error_message: string | null
+          file_name: string
+          fixed_phone_candidates: number
+          generated_rows: number
+          id: string
+          imported_rows: number
+          invalid_document_rows: number
+          invalid_phone_candidates: number
+          is_current: boolean
+          owner_id: string
+          phones_with_added_ninth_digit: number
+          processed_at: string | null
+          source_sheet_name: string | null
+          source_spreadsheet_id: string | null
+          source_type: string
+          status: string
+          storage_path: string | null
+          unique_valid_documents: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          documents_without_whatsapp?: number
+          duplicate_documents?: number
+          duplicate_rows?: number
+          error_message?: string | null
+          file_name: string
+          fixed_phone_candidates?: number
+          generated_rows?: number
+          id?: string
+          imported_rows?: number
+          invalid_document_rows?: number
+          invalid_phone_candidates?: number
+          is_current?: boolean
+          owner_id: string
+          phones_with_added_ninth_digit?: number
+          processed_at?: string | null
+          source_sheet_name?: string | null
+          source_spreadsheet_id?: string | null
+          source_type?: string
+          status?: string
+          storage_path?: string | null
+          unique_valid_documents?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          documents_without_whatsapp?: number
+          duplicate_documents?: number
+          duplicate_rows?: number
+          error_message?: string | null
+          file_name?: string
+          fixed_phone_candidates?: number
+          generated_rows?: number
+          id?: string
+          imported_rows?: number
+          invalid_document_rows?: number
+          invalid_phone_candidates?: number
+          is_current?: boolean
+          owner_id?: string
+          phones_with_added_ninth_digit?: number
+          processed_at?: string | null
+          source_sheet_name?: string | null
+          source_spreadsheet_id?: string | null
+          source_type?: string
+          status?: string
+          storage_path?: string | null
+          unique_valid_documents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      process_review_decisions: {
+        Row: {
+          created_at: string
+          decided_by: string
+          decision: string
+          document_normalized: string
+          id: string
+          import_id: string
+          previous_row_id: string | null
+          selected_row_id: string | null
+          undone_at: string | null
+          undone_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          decided_by: string
+          decision: string
+          document_normalized: string
+          id?: string
+          import_id: string
+          previous_row_id?: string | null
+          selected_row_id?: string | null
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          decided_by?: string
+          decision?: string
+          document_normalized?: string
+          id?: string
+          import_id?: string
+          previous_row_id?: string | null
+          selected_row_id?: string | null
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_review_decisions_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "process_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_review_previous_row_fk"
+            columns: ["previous_row_id", "import_id"]
+            isOneToOne: false
+            referencedRelation: "process_import_rows"
+            referencedColumns: ["id", "import_id"]
+          },
+          {
+            foreignKeyName: "process_review_selected_row_fk"
+            columns: ["selected_row_id", "import_id"]
+            isOneToOne: false
+            referencedRelation: "process_import_rows"
+            referencedColumns: ["id", "import_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           ativo: boolean
