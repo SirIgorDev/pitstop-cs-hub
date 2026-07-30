@@ -56,6 +56,7 @@ type OptionTable =
 const ROLE_LABEL: Record<DbRole, string> = {
   analyst: "Analista de CS",
   coordinator: "Coordenador",
+  process_analyst: "Analista de Processos",
   admin: "Administrador",
 };
 
