@@ -1,12 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileSpreadsheet, Loader2, Trash2, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState, type ChangeEvent } from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { ForbiddenState, LoadingState } from "@/components/state-views";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -50,11 +57,16 @@ type CurrentImport = {
   file_name: string;
   imported_rows: number;
   duplicate_documents: number;
+  duplicate_rows: number;
   invalid_document_rows: number;
   documents_without_whatsapp: number;
   generated_rows: number;
   processed_at: string | null;
 };
+
+const treatmentChartConfig = {
+  quantidade: { label: "Registros", color: "var(--primary)" },
+} satisfies ChartConfig;
 
 const METRICS = [
   ["Registros importados", "importedRows"],
@@ -70,6 +82,36 @@ function formatDateTime(value: string | null) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function csvCell(value: string) {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+async function fetchGeneratedRows(importId: string) {
+  const pageSize = 1000;
+  const rows: Array<{
+    document_normalized: string | null;
+    client_name: string;
+    contact_name: string;
+    email: string;
+    whatsapp: string | null;
+  }> = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("process_import_rows")
+      .select("document_normalized, client_name, contact_name, email, whatsapp")
+      .eq("import_id", importId)
+      .eq("outcome", "generated")
+      .order("source_row")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if (!data || data.length < pageSize) break;
+  }
+
+  return rows;
 }
 
 function rowOutcome(
@@ -117,6 +159,7 @@ function ProcessamentoBasesPage() {
   const [reading, setReading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const canAccess = role === "analista_processos" || role === "administrador";
 
   const currentQuery = useQuery({
@@ -126,7 +169,7 @@ function ProcessamentoBasesPage() {
       const { data, error } = await supabase
         .from("process_imports")
         .select(
-          "id, file_name, imported_rows, duplicate_documents, invalid_document_rows, documents_without_whatsapp, generated_rows, processed_at",
+          "id, file_name, imported_rows, duplicate_documents, duplicate_rows, invalid_document_rows, documents_without_whatsapp, generated_rows, processed_at",
         )
         .eq("owner_id", user.id)
         .eq("is_current", true)
@@ -265,6 +308,36 @@ function ProcessamentoBasesPage() {
     }
   };
 
+  const exportCurrent = async () => {
+    if (!currentQuery.data) return;
+    setExporting(true);
+    try {
+      const rows = await fetchGeneratedRows(currentQuery.data.id);
+      const lines = [
+        ["CPF/CNPJ", "Cliente", "Nome", "Email", "Whatsapp"],
+        ...rows.map((row) => [
+          row.document_normalized ?? "",
+          row.client_name,
+          row.contact_name,
+          row.email,
+          row.whatsapp ?? "",
+        ]),
+      ];
+      const csv = `\uFEFF${lines.map((line) => line.map(csvCell).join(";")).join("\r\n")}`;
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `base-tratada-${new Date().toISOString().slice(0, 10)}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${rows.length} registros exportados`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível exportar");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <>
       <PageHeader
@@ -303,14 +376,24 @@ function ProcessamentoBasesPage() {
                 {formatDateTime(currentQuery.data.processed_at)}
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={deleteCurrent} disabled={deleting}>
-              {deleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
-              )}
-              Excluir
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={exportCurrent} disabled={exporting}>
+                {exporting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Exportar CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={deleteCurrent} disabled={deleting}>
+                {deleting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-4 w-4" />
+                )}
+                Excluir
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <CurrentMetric label="Importados" value={currentQuery.data.imported_rows} />
@@ -321,6 +404,33 @@ function ProcessamentoBasesPage() {
               value={currentQuery.data.documents_without_whatsapp}
             />
             <CurrentMetric label="Gerados" value={currentQuery.data.generated_rows} highlight />
+          </CardContent>
+          <CardContent>
+            <h3 className="mb-3 text-sm font-medium">Resultado do tratamento</h3>
+            <ChartContainer config={treatmentChartConfig} className="h-[260px] w-full">
+              <BarChart
+                accessibilityLayer
+                data={[
+                  { nome: "Gerados", quantidade: currentQuery.data.generated_rows },
+                  { nome: "Duplicados", quantidade: currentQuery.data.duplicate_rows },
+                  {
+                    nome: "Documento inválido",
+                    quantidade: currentQuery.data.invalid_document_rows,
+                  },
+                  {
+                    nome: "Sem WhatsApp",
+                    quantidade: currentQuery.data.documents_without_whatsapp,
+                  },
+                ]}
+                margin={{ left: 8, right: 8 }}
+              >
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="nome" tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="quantidade" fill="var(--color-quantidade)" radius={6} />
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
       ) : null}
