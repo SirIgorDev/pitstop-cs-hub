@@ -512,6 +512,20 @@ export type Database = {
             referencedRelation: "process_imports"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "process_review_previous_row_fk"
+            columns: ["previous_row_id", "import_id"]
+            isOneToOne: false
+            referencedRelation: "process_import_rows"
+            referencedColumns: ["id", "import_id"]
+          },
+          {
+            foreignKeyName: "process_review_selected_row_fk"
+            columns: ["selected_row_id", "import_id"]
+            isOneToOne: false
+            referencedRelation: "process_import_rows"
+            referencedColumns: ["id", "import_id"]
+          },
         ]
       }
       profiles: {
@@ -713,7 +727,7 @@ export type Database = {
       is_active: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "analyst" | "coordinator" | "process_analyst" | "admin"
+      app_role: "analyst" | "coordinator" | "admin" | "process_analyst"
       categoria_gargalo:
         | "Documentação / Processos"
         | "Prazo de Atendimento / SLA"
@@ -870,7 +884,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["analyst", "coordinator", "process_analyst", "admin"],
+      app_role: ["analyst", "coordinator", "admin", "process_analyst"],
       categoria_gargalo: [
         "Documentação / Processos",
         "Prazo de Atendimento / SLA",
