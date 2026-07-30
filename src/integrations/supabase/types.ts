@@ -481,7 +481,7 @@ export type Database = {
       is_active: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "analyst" | "coordinator" | "admin"
+      app_role: "analyst" | "coordinator" | "admin" | "process_analyst"
       categoria_gargalo:
         | "Documentação / Processos"
         | "Prazo de Atendimento / SLA"
@@ -638,7 +638,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["analyst", "coordinator", "admin"],
+      app_role: ["analyst", "coordinator", "admin", "process_analyst"],
       categoria_gargalo: [
         "Documentação / Processos",
         "Prazo de Atendimento / SLA",
