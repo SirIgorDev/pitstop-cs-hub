@@ -11,12 +11,13 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 
-export type DbRole = "analyst" | "coordinator" | "admin";
-export type Role = "analista" | "coordenador" | "administrador";
+export type DbRole = "analyst" | "coordinator" | "process_analyst" | "admin";
+export type Role = "analista" | "coordenador" | "analista_processos" | "administrador";
 
 const DB_TO_UI: Record<DbRole, Role> = {
   analyst: "analista",
   coordinator: "coordenador",
+  process_analyst: "analista_processos",
   admin: "administrador",
 };
 
@@ -140,5 +141,6 @@ export const useAuth = useMockRole;
 export const ROLE_LABEL: Record<Role, string> = {
   analista: "Analista de CS",
   coordenador: "Coordenador",
+  analista_processos: "Analista de Processos",
   administrador: "Administrador",
 };
