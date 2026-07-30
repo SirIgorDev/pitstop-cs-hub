@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileSpreadsheet, Loader2, Trash2, Upload } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileSpreadsheet,
+  Loader2,
+  RotateCcw,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useRef, useState, type ChangeEvent } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
@@ -64,6 +74,23 @@ type CurrentImport = {
   processed_at: string | null;
 };
 
+type ReviewRow = {
+  id: string;
+  source_row: number;
+  document_normalized: string | null;
+  client_name: string;
+  contact_name: string;
+  email: string;
+  whatsapp: string | null;
+  phone_source: string | null;
+  outcome: string;
+};
+
+type ActiveReviewDecision = {
+  id: string;
+  document_normalized: string;
+};
+
 const treatmentChartConfig = {
   quantidade: { label: "Registros", color: "var(--primary)" },
 } satisfies ChartConfig;
@@ -114,6 +141,48 @@ async function fetchGeneratedRows(importId: string) {
   return rows;
 }
 
+async function fetchReviewRows(importId: string) {
+  const pageSize = 1000;
+  const rows: ReviewRow[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("process_import_rows")
+      .select(
+        "id, source_row, document_normalized, client_name, contact_name, email, whatsapp, phone_source, outcome",
+      )
+      .eq("import_id", importId)
+      .in("outcome", ["generated", "discarded_duplicate"])
+      .order("source_row")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...((data ?? []) as ReviewRow[]));
+    if (!data || data.length < pageSize) break;
+  }
+
+  return rows;
+}
+
+async function fetchActiveReviewDecisions(importId: string) {
+  const pageSize = 1000;
+  const decisions: ActiveReviewDecision[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("process_review_decisions")
+      .select("id, document_normalized")
+      .eq("import_id", importId)
+      .is("undone_at", null)
+      .order("created_at")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    decisions.push(...((data ?? []) as ActiveReviewDecision[]));
+    if (!data || data.length < pageSize) break;
+  }
+
+  return decisions;
+}
+
 function rowOutcome(
   raw: RawBaseRow,
   selectedBySourceRow: Map<number, BaseProcessingResult["rows"][number]>,
@@ -133,10 +202,18 @@ function rowOutcome(
     };
   }
 
+  const candidateSource = (["telefone3", "telefone1", "telefone2"] as PhoneSource[]).find(
+    (source) => analyzePhone(raw[source]).status === "valid_mobile",
+  );
+  const candidate = candidateSource ? analyzePhone(raw[candidateSource]) : null;
+
   return {
     outcome: generatedDocuments.has(document)
       ? ("discarded_duplicate" as const)
       : ("discarded_no_whatsapp" as const),
+    whatsapp: candidate?.normalized ?? null,
+    phoneSource: candidateSource ?? null,
+    addedNinthDigit: candidate?.addedNinthDigit ?? false,
   };
 }
 
@@ -176,6 +253,63 @@ function ProcessamentoBasesPage() {
         .maybeSingle();
       if (error) throw error;
       return data as CurrentImport | null;
+    },
+  });
+
+  const reviewRowsQuery = useQuery({
+    queryKey: ["process-import-review-rows", currentQuery.data?.id],
+    enabled: Boolean(currentQuery.data?.id),
+    queryFn: () => fetchReviewRows(currentQuery.data!.id),
+  });
+
+  const reviewDecisionsQuery = useQuery({
+    queryKey: ["process-import-review-decisions", currentQuery.data?.id],
+    enabled: Boolean(currentQuery.data?.id),
+    queryFn: () => fetchActiveReviewDecisions(currentQuery.data!.id),
+  });
+
+  const refreshReview = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["process-import-review-rows", currentQuery.data?.id],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["process-import-review-decisions", currentQuery.data?.id],
+      }),
+    ]);
+  };
+
+  const selectReviewMutation = useMutation({
+    mutationFn: async (selectedRowId: string) => {
+      if (!currentQuery.data) throw new Error("Importação atual não encontrada");
+      const { error } = await supabase.rpc("review_process_document", {
+        target_import_id: currentQuery.data.id,
+        target_selected_row_id: selectedRowId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await refreshReview();
+      toast.success("Contato selecionado para exportação");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Não foi possível alterar a seleção");
+    },
+  });
+
+  const undoReviewMutation = useMutation({
+    mutationFn: async (decisionId: string) => {
+      const { error } = await supabase.rpc("undo_process_review", {
+        target_decision_id: decisionId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await refreshReview();
+      toast.success("Alteração desfeita");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Não foi possível desfazer a alteração");
     },
   });
 
@@ -435,6 +569,17 @@ function ProcessamentoBasesPage() {
         </Card>
       ) : null}
 
+      {currentQuery.data && (
+        <DuplicateReview
+          rows={reviewRowsQuery.data ?? []}
+          decisions={reviewDecisionsQuery.data ?? []}
+          loading={reviewRowsQuery.isLoading || reviewDecisionsQuery.isLoading}
+          changing={selectReviewMutation.isPending || undoReviewMutation.isPending}
+          onSelect={(rowId) => selectReviewMutation.mutate(rowId)}
+          onUndo={(decisionId) => undoReviewMutation.mutate(decisionId)}
+        />
+      )}
+
       {!preview ? (
         <Card>
           <CardContent className="flex flex-col items-center py-14 text-center">
@@ -513,6 +658,168 @@ function ProcessamentoBasesPage() {
         </div>
       )}
     </>
+  );
+}
+
+function DuplicateReview({
+  rows,
+  decisions,
+  loading,
+  changing,
+  onSelect,
+  onUndo,
+}: {
+  rows: ReviewRow[];
+  decisions: ActiveReviewDecision[];
+  loading: boolean;
+  changing: boolean;
+  onSelect: (rowId: string) => void;
+  onUndo: (decisionId: string) => void;
+}) {
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
+  const grouped = new Map<string, ReviewRow[]>();
+  for (const row of rows) {
+    if (!row.document_normalized) continue;
+    const group = grouped.get(row.document_normalized) ?? [];
+    group.push(row);
+    grouped.set(row.document_normalized, group);
+  }
+  const duplicateGroups = [...grouped.entries()].filter(([, options]) => options.length > 1);
+  const pageCount = Math.ceil(duplicateGroups.length / pageSize);
+  const safePage = Math.min(page, Math.max(pageCount - 1, 0));
+  const visibleGroups = duplicateGroups.slice(safePage * pageSize, (safePage + 1) * pageSize);
+  const activeByDocument = new Map(
+    decisions.map((decision) => [decision.document_normalized, decision]),
+  );
+
+  if (loading) {
+    return <LoadingState title="Carregando revisão de duplicados…" />;
+  }
+
+  if (duplicateGroups.length === 0) return null;
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-base">Revisão de duplicados</CardTitle>
+        <CardDescription>
+          Compare os contatos do mesmo CPF/CNPJ e escolha qual será enviado no CSV. A decisão pode
+          ser desfeita.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {visibleGroups.map(([document, options]) => {
+          const activeDecision = activeByDocument.get(document);
+          return (
+            <div key={document} className="rounded-md border">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-4 py-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">CPF/CNPJ</p>
+                  <p className="font-medium">{document}</p>
+                </div>
+                {activeDecision && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={changing}
+                    onClick={() => onUndo(activeDecision.id)}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Desfazer alteração
+                  </Button>
+                )}
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Linha</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead>E-mail</TableHead>
+                      <TableHead>WhatsApp</TableHead>
+                      <TableHead className="text-right">Ação</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {options.map((option) => {
+                      const selected = option.outcome === "generated";
+                      return (
+                        <TableRow key={option.id}>
+                          <TableCell>{option.source_row}</TableCell>
+                          <TableCell>{option.client_name || "—"}</TableCell>
+                          <TableCell>{option.contact_name || "—"}</TableCell>
+                          <TableCell>{option.email || "—"}</TableCell>
+                          <TableCell>
+                            {option.whatsapp ? (
+                              <div>
+                                <span>{option.whatsapp}</span>
+                                {option.phone_source && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {option.phone_source}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Sem celular válido</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {selected ? (
+                              <Badge variant="secondary">
+                                <Check className="mr-1 h-3 w-3" />
+                                Selecionado
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={changing || !option.whatsapp}
+                                onClick={() => onSelect(option.id)}
+                              >
+                                Selecionar
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          );
+        })}
+        {pageCount > 1 && (
+          <div className="flex items-center justify-between border-t pt-4">
+            <p className="text-sm text-muted-foreground">
+              Página {safePage + 1} de {pageCount} · {duplicateGroups.length} documentos duplicados
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage === 0}
+                onClick={() => setPage((value) => Math.max(value - 1, 0))}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage >= pageCount - 1}
+                onClick={() => setPage((value) => Math.min(value + 1, pageCount - 1))}
+              >
+                Próxima
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
