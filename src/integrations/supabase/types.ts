@@ -717,6 +717,17 @@ export type Database = {
         Args: { target_import_id: string }
         Returns: undefined
       }
+      review_process_document: {
+        Args: {
+          target_import_id: string
+          target_selected_row_id: string
+        }
+        Returns: undefined
+      }
+      undo_process_review: {
+        Args: { target_decision_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
