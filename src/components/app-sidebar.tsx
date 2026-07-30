@@ -3,6 +3,7 @@ import {
   AlertOctagon,
   ClipboardList,
   Eraser,
+  FileSpreadsheet,
   LayoutDashboard,
   LineChart,
   ScrollText,
@@ -59,6 +60,12 @@ const ITEMS: Item[] = [
     url: "/limpar-documento",
     icon: Eraser,
     roles: ["analista", "coordenador", "administrador"],
+  },
+  {
+    title: "Tratamento de Bases",
+    url: "/processamento-bases",
+    icon: FileSpreadsheet,
+    roles: ["analista_processos", "administrador"],
   },
   {
     title: "Auditoria",
