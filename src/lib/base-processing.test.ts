@@ -8,6 +8,7 @@ import {
   isValidCnpj,
   isValidCpf,
   normalizeDocument,
+  normalizePersonName,
   processBaseRows,
   type RawBaseRow,
 } from "./base-processing.ts";
@@ -56,6 +57,12 @@ test("adiciona o nono dígito somente a celular antigo", () => {
   assert.equal(fixed.normalized, null);
 });
 
+test("normaliza nomes com iniciais maiúsculas", () => {
+  assert.equal(normalizePersonName("IGOR MOTA"), "Igor Mota");
+  assert.equal(normalizePersonName("  mArIa   dA silVA  "), "Maria Da Silva");
+  assert.equal(normalizePersonName("JOÃO-PEDRO D'ÁVILA"), "João-Pedro D'Ávila");
+});
+
 test("prioriza Telefone 3 em todo o grupo duplicado", () => {
   const result = processBaseRows([
     row({
@@ -73,7 +80,7 @@ test("prioriza Telefone 3 em todo o grupo duplicado", () => {
   assert.deepEqual(result.rows[0], {
     documento: "06219749000100",
     cliente: "Cliente",
-    nome: "Contato do telefone 3",
+    nome: "Contato Do Telefone 3",
     email: "outro-email-invalido",
     whatsapp: "85999996666",
     phoneSource: "telefone3",
@@ -110,7 +117,7 @@ test("gera uma linha por documento no layout final", () => {
   const result = processBaseRows([
     row({
       empresa: "DIRECONT ASSESSORIA",
-      representante: "Marcela",
+      representante: "MARCELA",
       email: "email-invalido",
       telefone3: "71991544438",
     }),

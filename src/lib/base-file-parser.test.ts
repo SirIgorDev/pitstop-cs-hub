@@ -48,6 +48,16 @@ test("aceita o layout final como fonte quando há Whatsapp", () => {
   assert.equal(parsed.rows[0]?.telefone3, "85999999999");
 });
 
+test("trata a coluna Whatsapp da origem como Telefone 3 prioritário", () => {
+  const parsed = parseBaseMatrix([
+    ["CPF/CNPJ", "EMPRESA", "NOME", "TELEFONE 1", "WHATSAPP"],
+    ["52998224725", "Cliente", "IGOR MOTA", "8532735150", "85999999999"],
+  ]);
+
+  assert.equal(parsed.rows[0]?.telefone1, "8532735150");
+  assert.equal(parsed.rows[0]?.telefone3, "85999999999");
+});
+
 test("restaura o zero inicial perdido em documento numérico do Excel", () => {
   const parsed = parseBaseMatrix([
     ["CPF/CNPJ", "TELEFONE 3"],

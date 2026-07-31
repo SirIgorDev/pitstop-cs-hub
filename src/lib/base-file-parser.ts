@@ -17,7 +17,14 @@ const HEADER_ALIASES = {
   email: ["email", "correioeletronico"],
   telefone1: ["telefone1", "fone1", "celular1"],
   telefone2: ["telefone2", "fone2", "celular2"],
-  telefone3: ["telefone3", "fone3", "celular3", "whatsapp"],
+  telefone3: [
+    "whatsapp",
+    "numerowhatsapp",
+    "telefonewhatsapp",
+    "telefone3",
+    "fone3",
+    "celular3",
+  ],
 } as const;
 
 function normalizeHeader(value: CellValue): string {
