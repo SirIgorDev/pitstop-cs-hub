@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/chart";
 import { EmptyState, ErrorState, LoadingState } from "@/components/state-views";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/mock-role";
+import { isIndividualAnalyst, useAuth } from "@/lib/mock-role";
 import { SEGMENTOS_GARGALO } from "@/lib/constants";
 
 export const Route = createFileRoute("/_app/")({
@@ -69,6 +69,7 @@ const IMPACT_COLORS: Record<string, string> = {
 
 function DashboardGargalos() {
   const { role, user } = useAuth();
+  const isAnalyst = isIndividualAnalyst(role);
   const queryClient = useQueryClient();
   const [mes, setMes] = useState(currentMonth());
   const [segmento, setSegmento] = useState("all");
@@ -186,7 +187,7 @@ function DashboardGargalos() {
       <PageHeader
         title="Dashboard de Gargalos"
         description={
-          role === "analista"
+          isAnalyst
             ? "Acompanhamento dos seus gargalos de Customer Success."
             : "Visão consolidada dos gargalos do time de Customer Success."
         }
@@ -214,7 +215,7 @@ function DashboardGargalos() {
             })),
           ]}
         />
-        {role !== "analista" && (
+        {!isAnalyst && (
           <FilterSelect
             label="Responsável CS"
             value={responsavel}

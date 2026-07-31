@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/mock-role";
+import { isIndividualAnalyst, useAuth } from "@/lib/mock-role";
 import {
   Dialog,
   DialogContent,
@@ -65,7 +65,7 @@ export function NeoForm({ open, onOpenChange, initial }: Props) {
   const qc = useQueryClient();
   const [form, setForm] = useState<Registro>(emptyReg(user.id));
   const isEdit = !!initial?.id;
-  const canPickResponsavel = role !== "analista";
+  const canPickResponsavel = !isIndividualAnalyst(role);
 
   useEffect(() => {
     if (open) {

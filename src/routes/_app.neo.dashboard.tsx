@@ -30,7 +30,7 @@ import {
 import { EmptyState, ErrorState, LoadingState } from "@/components/state-views";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/mock-role";
+import { isIndividualAnalyst, useAuth } from "@/lib/mock-role";
 import { monthBounds } from "@/lib/date";
 
 export const Route = createFileRoute("/_app/neo/dashboard")({
@@ -80,6 +80,7 @@ const ESTEIRA_COLORS: Record<string, string> = {
 
 function NeoDashboardPage() {
   const { role, user } = useAuth();
+  const isAnalyst = isIndividualAnalyst(role);
   const queryClient = useQueryClient();
   const [periodo, setPeriodo] = useState<Periodo>("mensal");
   const [responsavel, setResponsavel] = useState("all");
@@ -173,7 +174,7 @@ function NeoDashboardPage() {
       <PageHeader
         title="Dashboard Neo"
         description={
-          role === "analista"
+          isAnalyst
             ? "Indicadores dos seus atendimentos Neo."
             : "Indicadores consolidados dos atendimentos Neo."
         }

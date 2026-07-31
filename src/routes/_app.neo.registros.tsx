@@ -35,7 +35,7 @@ import {
 import { NeoForm } from "@/components/neo-form";
 import { EmptyState, ErrorState, LoadingState } from "@/components/state-views";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/mock-role";
+import { isIndividualAnalyst, useAuth } from "@/lib/mock-role";
 import { TIPOS_NEO } from "@/lib/constants";
 import { formatDateOnly, monthBounds } from "@/lib/date";
 
@@ -48,6 +48,7 @@ const PAGE_SIZE = 15;
 
 function NeoRegistrosPage() {
   const { role } = useAuth();
+  const isAnalyst = isIndividualAnalyst(role);
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -108,7 +109,7 @@ function NeoRegistrosPage() {
 
   const analystsQ = useQuery({
     queryKey: ["profiles_ativos_all"],
-    enabled: role !== "analista",
+    enabled: !isAnalyst,
     queryFn: async () => {
       const { data, error } = await supabase.from("profiles").select("id, nome").order("nome");
       if (error) throw error;
@@ -270,7 +271,7 @@ function NeoRegistrosPage() {
         <FilterSelect value={canal} onChange={(v) => { setCanal(v); setPage(1); }} placeholder="Canal" options={[{ value: "all", label: "Todos os canais" }, ...(canaisQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
         <FilterSelect value={esteira} onChange={(v) => { setEsteira(v); setPage(1); }} placeholder="Esteira" options={[{ value: "all", label: "Todas esteiras" }, ...(esteirasQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
         <FilterSelect value={status} onChange={(v) => { setStatus(v); setPage(1); }} placeholder="Status" options={[{ value: "all", label: "Todos status" }, ...(statusQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
-        {role !== "analista" && (
+        {!isAnalyst && (
           <FilterSelect
             value={responsavel}
             onChange={(v) => { setResponsavel(v); setPage(1); }}
