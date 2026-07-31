@@ -26,6 +26,13 @@ import {
 } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -50,7 +57,7 @@ export const Route = createFileRoute("/_app/processamento-bases")({
   component: ProcessamentoBasesPage,
   head: () => ({
     meta: [
-      { title: "Tratamento de Bases — Controller CS" },
+      { title: "Tratamento de Disparo — Controller CS" },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -102,6 +109,8 @@ const METRICS = [
   ["Sem WhatsApp", "documentsWithoutWhatsapp"],
   ["Registros que serão gerados", "generatedRows"],
 ] as const;
+
+const PREVIEW_PAGE_SIZES = [50, 100, 500, 1000] as const;
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";
@@ -237,6 +246,8 @@ function ProcessamentoBasesPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [previewPage, setPreviewPage] = useState(0);
+  const [previewPageSize, setPreviewPageSize] = useState<number>(50);
   const canAccess = role === "analista_processos" || role === "administrador";
 
   const currentQuery = useQuery({
@@ -316,7 +327,7 @@ function ProcessamentoBasesPage() {
   if (!canAccess) {
     return (
       <>
-        <PageHeader title="Tratamento de Bases" />
+        <PageHeader title="Tratamento de Disparo" />
         <ForbiddenState
           title="Área restrita"
           description="Somente Analistas de Processos e Administradores podem tratar bases."
@@ -334,6 +345,7 @@ function ProcessamentoBasesPage() {
     try {
       const parsed = await parseBaseFile(file);
       const result = processBaseRows(parsed.rows);
+      setPreviewPage(0);
       setPreview({ file, parsed, result });
       toast.success("Arquivo analisado com sucesso");
     } catch (error) {
@@ -475,7 +487,7 @@ function ProcessamentoBasesPage() {
   return (
     <>
       <PageHeader
-        title="Tratamento de Bases"
+        title="Tratamento de Disparo"
         description="Importe CSV ou XLSX, valide CPF/CNPJ, elimine duplicidades e selecione o melhor WhatsApp."
         actions={
           <>
@@ -627,25 +639,84 @@ function ProcessamentoBasesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {preview.result.rows.slice(0, 100).map((row) => (
-                      <TableRow key={row.documento}>
-                        <TableCell>{row.documento}</TableCell>
-                        <TableCell>{row.cliente}</TableCell>
-                        <TableCell>{row.nome}</TableCell>
-                        <TableCell>{row.email}</TableCell>
-                        <TableCell>{row.whatsapp}</TableCell>
-                      </TableRow>
-                    ))}
+                    {preview.result.rows
+                      .slice(
+                        previewPage * previewPageSize,
+                        (previewPage + 1) * previewPageSize,
+                      )
+                      .map((row) => (
+                        <TableRow key={row.documento}>
+                          <TableCell>{row.documento}</TableCell>
+                          <TableCell>{row.cliente}</TableCell>
+                          <TableCell>{row.nome}</TableCell>
+                          <TableCell>{row.email}</TableCell>
+                          <TableCell>{row.whatsapp}</TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </div>
-              {preview.result.rows.length > 100 && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Exibindo os primeiros 100 registros.
-                </p>
-              )}
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Registros por página</span>
+                  <Select
+                    value={String(previewPageSize)}
+                    onValueChange={(value) => {
+                      setPreviewPageSize(Number(value));
+                      setPreviewPage(0);
+                    }}
+                  >
+                    <SelectTrigger className="w-24" aria-label="Registros por página">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PREVIEW_PAGE_SIZES.map((size) => (
+                        <SelectItem key={size} value={String(size)}>
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Página {previewPage + 1} de{" "}
+                    {Math.max(1, Math.ceil(preview.result.rows.length / previewPageSize))}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPreviewPage((page) => Math.max(0, page - 1))}
+                    disabled={previewPage === 0}
+                  >
+                    <ChevronLeft className="mr-1 h-4 w-4" />
+                    Anterior
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPreviewPage((page) => page + 1)}
+                    disabled={
+                      previewPage + 1 >=
+                      Math.ceil(preview.result.rows.length / previewPageSize)
+                    }
+                  >
+                    Próxima
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
               <div className="mt-5 flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setPreview(null)} disabled={saving}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPreview(null);
+                    setPreviewPage(0);
+                  }}
+                  disabled={saving}
+                >
                   Cancelar
                 </Button>
                 <Button onClick={saveImport} disabled={saving}>
