@@ -47,6 +47,7 @@ import { parseBaseFile, type ParsedBaseFile } from "@/lib/base-file-parser";
 import {
   analyzePhone,
   normalizeDocument,
+  normalizePersonName,
   processBaseRows,
   type BaseProcessingResult,
   type PhoneSource,
@@ -394,7 +395,7 @@ function ProcessamentoBasesPage() {
           document_raw: String(raw.documento ?? ""),
           document_normalized: normalizeDocument(raw.documento),
           client_name: String(raw.empresa ?? ""),
-          contact_name: String(raw.representante ?? ""),
+          contact_name: normalizePersonName(raw.representante),
           email: String(raw.email ?? ""),
           phone_1: String(raw.telefone1 ?? ""),
           phone_2: String(raw.telefone2 ?? ""),
