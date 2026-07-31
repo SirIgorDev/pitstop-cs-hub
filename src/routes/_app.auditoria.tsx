@@ -36,6 +36,7 @@ type AuditLog = {
 };
 
 const ACTION_LABELS: Record<string, string> = {
+  import: "Importação",
   create: "Criação",
   update: "Edição",
   delete: "Exclusão",
@@ -44,6 +45,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const ENTITY_LABELS: Record<string, string> = {
+  process_imports: "Tratamento de Disparo",
   gargalos: "Gargalo",
   registros_neo: "Registro Neo",
   profiles: "Usuário",
@@ -56,6 +58,13 @@ const ENTITY_LABELS: Record<string, string> = {
 };
 
 const FIELD_LABELS: Record<string, string> = {
+  file_name: "Arquivo",
+  imported_rows: "Registros importados",
+  duplicate_documents: "Documentos duplicados",
+  invalid_document_rows: "Documentos inválidos",
+  documents_without_whatsapp: "Sem WhatsApp",
+  generated_rows: "Registros gerados",
+  processed_at: "Processado em",
   nome: "Nome",
   email: "E-mail",
   role: "Perfil",
@@ -96,7 +105,9 @@ const IGNORED_FIELDS = new Set([
 ]);
 
 function actionBadge(action: string) {
-  if (action === "create") return "border-success/30 bg-success/5 text-success";
+  if (action === "create" || action === "import") {
+    return "border-success/30 bg-success/5 text-success";
+  }
   if (action === "delete" || action === "soft_delete") {
     return "border-destructive/30 bg-destructive/5 text-destructive";
   }

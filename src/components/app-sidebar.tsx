@@ -56,16 +56,16 @@ const ITEMS: Item[] = [
     roles: ["analista", "coordenador", "administrador"],
   },
   {
+    title: "Tratamento de Disparo",
+    url: "/processamento-bases",
+    icon: FileSpreadsheet,
+    roles: ["analista_processos", "administrador"],
+  },
+  {
     title: "Limpar CPF/CNPJ",
     url: "/limpar-documento",
     icon: Eraser,
     roles: ["analista", "coordenador", "administrador"],
-  },
-  {
-    title: "Tratamento de Bases",
-    url: "/processamento-bases",
-    icon: FileSpreadsheet,
-    roles: ["analista_processos", "administrador"],
   },
   {
     title: "Auditoria",
