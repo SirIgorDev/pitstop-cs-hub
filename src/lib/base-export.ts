@@ -1,3 +1,5 @@
+import { normalizePersonName } from "./base-processing.ts";
+
 export interface ExportBaseRow {
   document_normalized: string | null;
   client_name: string;
@@ -18,7 +20,7 @@ export function buildBaseCsv(rows: ExportBaseRow[]): string {
     ...rows.map((row) => [
       row.document_normalized ?? "",
       row.client_name,
-      row.contact_name,
+      normalizePersonName(row.contact_name),
       row.email,
       row.whatsapp ?? "",
     ]),
