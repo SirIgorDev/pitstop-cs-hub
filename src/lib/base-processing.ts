@@ -137,6 +137,13 @@ function asText(value: unknown): string {
   return String(value ?? "").trim();
 }
 
+export function normalizePersonName(value: unknown): string {
+  return asText(value)
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/(^|[\s'-])\p{L}/gu, (letter) => letter.toLocaleUpperCase("pt-BR"));
+}
+
 function allDigitsAreEqual(value: string): boolean {
   return /^(\d)\1+$/.test(value);
 }
@@ -339,7 +346,7 @@ export function processBaseRows(rawRows: RawBaseRow[]): BaseProcessingResult {
     rows.push({
       documento: document,
       cliente: asText(selected.row.raw.empresa),
-      nome: asText(selected.row.raw.representante),
+      nome: normalizePersonName(selected.row.raw.representante),
       email: asText(selected.row.raw.email),
       whatsapp: selected.phone.normalized,
       phoneSource: selected.source,

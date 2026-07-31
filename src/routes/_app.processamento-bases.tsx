@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { buildBaseCsv } from "@/lib/base-export";
 import { parseBaseFile, type ParsedBaseFile } from "@/lib/base-file-parser";
 import {
   analyzePhone,
@@ -118,10 +119,6 @@ function formatDateTime(value: string | null) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
-}
-
-function csvCell(value: string) {
-  return `"${value.replaceAll('"', '""')}"`;
 }
 
 async function fetchGeneratedRows(importId: string) {
@@ -459,17 +456,7 @@ function ProcessamentoBasesPage() {
     setExporting(true);
     try {
       const rows = await fetchGeneratedRows(currentQuery.data.id);
-      const lines = [
-        ["CPF/CNPJ", "Cliente", "Nome", "Email", "Whatsapp"],
-        ...rows.map((row) => [
-          row.document_normalized ?? "",
-          row.client_name,
-          row.contact_name,
-          row.email,
-          row.whatsapp ?? "",
-        ]),
-      ];
-      const csv = `\uFEFF${lines.map((line) => line.map(csvCell).join(";")).join("\r\n")}`;
+      const csv = buildBaseCsv(rows);
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
       const anchor = document.createElement("a");
       anchor.href = url;
