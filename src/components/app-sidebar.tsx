@@ -56,7 +56,7 @@ const ITEMS: Item[] = [
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
   },
   {
-    title: "Tratamento de Disparo",
+    title: "Tratamento de Disparo em Massa",
     url: "/processamento-bases",
     icon: FileSpreadsheet,
     roles: ["analista_processos", "administrador"],
