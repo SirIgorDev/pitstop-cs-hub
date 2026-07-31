@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/mock-role";
+import { isIndividualAnalyst, useAuth } from "@/lib/mock-role";
 import {
   Dialog,
   DialogContent,
@@ -78,7 +78,7 @@ export function GargaloForm({ open, onOpenChange, initial }: Props) {
   const [form, setForm] = useState<Gargalo>(empty(user.id));
   const isEdit = !!initial?.id;
 
-  const canPickResponsavel = role !== "analista";
+  const canPickResponsavel = !isIndividualAnalyst(role);
 
   useEffect(() => {
     if (open) {

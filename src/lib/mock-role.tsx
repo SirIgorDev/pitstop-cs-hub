@@ -14,6 +14,10 @@ import type { Session } from "@supabase/supabase-js";
 export type DbRole = "analyst" | "coordinator" | "process_analyst" | "admin";
 export type Role = "analista" | "coordenador" | "analista_processos" | "administrador";
 
+export function isIndividualAnalyst(role: Role) {
+  return role === "analista" || role === "analista_processos";
+}
+
 const DB_TO_UI: Record<DbRole, Role> = {
   analyst: "analista",
   coordinator: "coordenador",

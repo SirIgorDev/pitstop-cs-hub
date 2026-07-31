@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@/lib/mock-role";
+import { isIndividualAnalyst, useAuth } from "@/lib/mock-role";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/auditoria")({
@@ -189,7 +189,7 @@ function AuditoriaPage() {
     });
   }, [action, entity, query.data, search]);
 
-  if (role === "analista") {
+  if (isIndividualAnalyst(role)) {
     return (
       <>
         <PageHeader title="Auditoria" />

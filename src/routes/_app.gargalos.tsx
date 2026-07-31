@@ -35,7 +35,7 @@ import {
 import { GargaloForm } from "@/components/gargalo-form";
 import { EmptyState, ErrorState, LoadingState } from "@/components/state-views";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/mock-role";
+import { isIndividualAnalyst, useAuth } from "@/lib/mock-role";
 import {
   IMPACTOS,
   RISCOS_CHURN,
@@ -55,6 +55,7 @@ const PAGE_SIZE = 15;
 
 function GargalosPage() {
   const { role } = useAuth();
+  const isAnalyst = isIndividualAnalyst(role);
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -73,7 +74,7 @@ function GargalosPage() {
 
   const analystsQ = useQuery({
     queryKey: ["profiles_ativos_all"],
-    enabled: role !== "analista",
+    enabled: !isAnalyst,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -214,7 +215,7 @@ function GargalosPage() {
         </div>
         <FilterSelect value={mes} onChange={(v) => { setMes(v); setPage(1); }} placeholder="Mês" options={[{ value: "all", label: "Todos os meses" }, ...meses]} />
         <FilterSelect value={segmento} onChange={(v) => { setSegmento(v); setPage(1); }} placeholder="Segmento" options={[{ value: "all", label: "Todos segmentos" }, ...SEGMENTOS_GARGALO.map((s) => ({ value: s, label: s }))]} />
-        {role !== "analista" && (
+        {!isAnalyst && (
           <FilterSelect
             value={responsavel}
             onChange={(v) => { setResponsavel(v); setPage(1); }}

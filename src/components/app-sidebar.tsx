@@ -35,25 +35,25 @@ const ITEMS: Item[] = [
     title: "Visão PitStop",
     url: "/",
     icon: LayoutDashboard,
-    roles: ["analista", "coordenador", "administrador"],
+    roles: ["analista", "analista_processos", "coordenador", "administrador"],
   },
   {
     title: "Cadastro de PitStop",
     url: "/gargalos",
     icon: AlertOctagon,
-    roles: ["analista", "coordenador", "administrador"],
+    roles: ["analista", "analista_processos", "coordenador", "administrador"],
   },
   {
     title: "Visão Cobertura da Carteira",
     url: "/neo/dashboard",
     icon: LineChart,
-    roles: ["analista", "coordenador", "administrador"],
+    roles: ["analista", "analista_processos", "coordenador", "administrador"],
   },
   {
     title: "Cadastro Neo",
     url: "/neo/registros",
     icon: ClipboardList,
-    roles: ["analista", "coordenador", "administrador"],
+    roles: ["analista", "analista_processos", "coordenador", "administrador"],
   },
   {
     title: "Tratamento de Disparo",
@@ -65,7 +65,7 @@ const ITEMS: Item[] = [
     title: "Limpar CPF/CNPJ",
     url: "/limpar-documento",
     icon: Eraser,
-    roles: ["analista", "coordenador", "administrador"],
+    roles: ["analista", "analista_processos", "coordenador", "administrador"],
   },
   {
     title: "Auditoria",
