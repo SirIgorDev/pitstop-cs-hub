@@ -13,6 +13,20 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { MockRoleProvider } from "../lib/mock-role";
 import { Toaster } from "sonner";
+import { ThemeProvider, useTheme } from "@/components/theme-provider";
+import { useAuth } from "@/lib/mock-role";
+
+const THEME_BOOTSTRAP_SCRIPT = `(() => {
+  try {
+    const prefix = "cs-controller:theme:";
+    const lastUser = localStorage.getItem(prefix + "last-user");
+    const theme = lastUser ? localStorage.getItem(prefix + lastUser) : null;
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+      document.documentElement.style.colorScheme = "dark";
+    }
+  } catch (_) {}
+})();`;
 
 function NotFoundComponent() {
   return (
@@ -82,8 +96,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Controller CS — Fortes Tecnologia" },
       {
         name: "description",
-        content:
-          "Sistema interno do time de Customer Success da Fortes Tecnologia.",
+        content: "Sistema interno do time de Customer Success da Fortes Tecnologia.",
       },
       { name: "author", content: "Fortes Tecnologia" },
       { property: "og:title", content: "Controller CS — Fortes Tecnologia" },
@@ -94,9 +107,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Controller CS — Fortes Tecnologia" },
-      { name: "twitter:description", content: "Sistema interno do time de Customer Success da Fortes Tecnologia." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e92bdc73-0b0b-4936-8e1f-57987a40fd5d/id-preview-8641b8d9--b299b783-5cb2-4c74-bf1e-2a9f33901bcb.lovable.app-1784503597674.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e92bdc73-0b0b-4936-8e1f-57987a40fd5d/id-preview-8641b8d9--b299b783-5cb2-4c74-bf1e-2a9f33901bcb.lovable.app-1784503597674.png" },
+      {
+        name: "twitter:description",
+        content: "Sistema interno do time de Customer Success da Fortes Tecnologia.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e92bdc73-0b0b-4936-8e1f-57987a40fd5d/id-preview-8641b8d9--b299b783-5cb2-4c74-bf1e-2a9f33901bcb.lovable.app-1784503597674.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e92bdc73-0b0b-4936-8e1f-57987a40fd5d/id-preview-8641b8d9--b299b783-5cb2-4c74-bf1e-2a9f33901bcb.lovable.app-1784503597674.png",
+      },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -118,6 +142,7 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
@@ -134,9 +159,29 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <MockRoleProvider>
-        <Outlet />
-        <Toaster richColors position="top-right" />
+        <ThemeBridge />
       </MockRoleProvider>
     </QueryClientProvider>
+  );
+}
+
+function ThemeBridge() {
+  const { user, loading } = useAuth();
+
+  return (
+    <ThemeProvider userId={user.id} authLoading={loading}>
+      <ThemeContent />
+    </ThemeProvider>
+  );
+}
+
+function ThemeContent() {
+  const { theme } = useTheme();
+
+  return (
+    <>
+      <Outlet />
+      <Toaster richColors position="top-right" theme={theme} />
+    </>
   );
 }
