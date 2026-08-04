@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_control_settings: {
+        Row: {
+          id: boolean
+          rbac_enabled: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          rbac_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          rbac_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -75,6 +96,90 @@ export type Database = {
           id?: string
           nome?: string
           ordem?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      cargo_permissoes: {
+        Row: {
+          cargo_id: string
+          created_at: string
+          escopo: string
+          permissao_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cargo_id: string
+          created_at?: string
+          escopo?: string
+          permissao_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cargo_id?: string
+          created_at?: string
+          escopo?: string
+          permissao_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargo_permissoes_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargo_permissoes_permissao_id_fkey"
+            columns: ["permissao_id"]
+            isOneToOne: false
+            referencedRelation: "permissoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cargos: {
+        Row: {
+          ativo: boolean
+          codigo: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          perfil_base: Database["public"]["Enums"]["app_role"]
+          protegido: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          perfil_base?: Database["public"]["Enums"]["app_role"]
+          protegido?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          perfil_base?: Database["public"]["Enums"]["app_role"]
+          protegido?: boolean
           updated_at?: string
           updated_by?: string | null
         }
@@ -255,6 +360,39 @@ export type Database = {
             referencedColumns: ["nome"]
           },
         ]
+      }
+      permissoes: {
+        Row: {
+          acao: string
+          codigo: string
+          created_at: string
+          id: string
+          modulo: string
+          ordem: number
+          permite_escopo: boolean
+          rotina: string
+        }
+        Insert: {
+          acao: string
+          codigo: string
+          created_at?: string
+          id?: string
+          modulo: string
+          ordem?: number
+          permite_escopo?: boolean
+          rotina: string
+        }
+        Update: {
+          acao?: string
+          codigo?: string
+          created_at?: string
+          id?: string
+          modulo?: string
+          ordem?: number
+          permite_escopo?: boolean
+          rotina?: string
+        }
+        Relationships: []
       }
       pitstop_options: {
         Row: {
@@ -532,6 +670,7 @@ export type Database = {
         Row: {
           ativo: boolean
           avatar_path: string | null
+          cargo_id: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -545,6 +684,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           avatar_path?: string | null
+          cargo_id?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -558,6 +698,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           avatar_path?: string | null
+          cargo_id?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -568,7 +709,15 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       registros_neo: {
         Row: {
@@ -701,6 +850,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_assign_user_cargo: {
+        Args: {
+          next_active: boolean
+          next_cargo_id: string
+          target_user_id: string
+        }
+        Returns: undefined
+      }
+      admin_save_cargo: {
+        Args: {
+          base_role: Database["public"]["Enums"]["app_role"]
+          cargo_active: boolean
+          cargo_description: string
+          cargo_name: string
+          permission_entries: Json
+          target_cargo_id: string
+        }
+        Returns: string
+      }
+      admin_set_rbac_enabled: {
+        Args: { next_enabled: boolean }
+        Returns: undefined
+      }
       admin_soft_delete_option: {
         Args: { target_id: string; target_table: string }
         Returns: undefined
@@ -712,6 +884,15 @@ export type Database = {
           target_user_id: string
         }
         Returns: undefined
+      }
+      current_permission_scope: {
+        Args: { permission_code: string }
+        Returns: string
+      }
+      current_user_access: { Args: never; Returns: Json }
+      current_user_has_permission: {
+        Args: { permission_code: string }
+        Returns: boolean
       }
       finalize_process_import: {
         Args: { target_import_id: string }
@@ -725,6 +906,7 @@ export type Database = {
         Returns: boolean
       }
       is_active: { Args: { _user_id: string }; Returns: boolean }
+      rbac_enabled: { Args: never; Returns: boolean }
       review_process_document: {
         Args: { target_import_id: string; target_selected_row_id: string }
         Returns: undefined
