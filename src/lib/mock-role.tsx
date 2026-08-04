@@ -10,6 +10,8 @@ export type PermissionScope = "own" | "all";
 export type PermissionMap = Record<string, PermissionScope>;
 
 const OPERATIONAL_PERMISSIONS = [
+  "relationship.view",
+  "technical_support.view",
   "pitstop.monitor.view",
   "pitstop.records.view",
   "pitstop.records.create",
