@@ -1,14 +1,19 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   AlertOctagon,
+  ChevronRight,
   ClipboardList,
   Eraser,
   FileSpreadsheet,
+  Handshake,
+  Headset,
   LayoutDashboard,
   LineChart,
   ScrollText,
   Settings2,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +24,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useMockRole, type Role } from "@/lib/mock-role";
@@ -30,9 +38,9 @@ type Item = {
   roles: Role[];
 };
 
-const ITEMS: Item[] = [
+const RELATIONSHIP_ITEMS: Item[] = [
   {
-    title: "Visão PitStop",
+    title: "Monitor - PitStop",
     url: "/",
     icon: LayoutDashboard,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
@@ -44,7 +52,7 @@ const ITEMS: Item[] = [
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
   },
   {
-    title: "Visão Cobertura da Carteira",
+    title: "Monitor - Carteira",
     url: "/neo/dashboard",
     icon: LineChart,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
@@ -61,6 +69,9 @@ const ITEMS: Item[] = [
     icon: FileSpreadsheet,
     roles: ["analista_processos", "administrador"],
   },
+];
+
+const GENERAL_ITEMS: Item[] = [
   {
     title: "Limpar CPF/CNPJ",
     url: "/limpar-documento",
@@ -73,21 +84,30 @@ const ITEMS: Item[] = [
     icon: ScrollText,
     roles: ["coordenador", "administrador"],
   },
-  { title: "Administração", url: "/administracao", icon: Settings2, roles: ["administrador"] },
+  {
+    title: "Administração",
+    url: "/administracao",
+    icon: Settings2,
+    roles: ["administrador"],
+  },
 ];
 
 export function AppSidebar() {
   const { role } = useMockRole();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const pathname = useRouterState({ select: (routerState) => routerState.location.pathname });
+  const [relationshipOpen, setRelationshipOpen] = useState(true);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const isActive = (url: string) => {
     if (url === "/") return pathname === "/";
-    return pathname === url || pathname.startsWith(url + "/");
+    return pathname === url || pathname.startsWith(`${url}/`);
   };
 
-  const visible = ITEMS.filter((i) => i.roles.includes(role));
+  const relationshipItems = RELATIONSHIP_ITEMS.filter((item) => item.roles.includes(role));
+  const generalItems = GENERAL_ITEMS.filter((item) => item.roles.includes(role));
+  const relationshipActive = relationshipItems.some((item) => isActive(item.url));
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -114,13 +134,74 @@ export function AppSidebar() {
           {!collapsed && <SidebarGroupLabel>Navegação</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
-              {visible.map((item) => (
+              <Collapsible
+                asChild
+                open={relationshipOpen}
+                onOpenChange={setRelationshipOpen}
+                className="group/collapsible"
+              >
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      isActive={relationshipActive}
+                      tooltip="Relacionamento"
+                      className="data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
+                    >
+                      <Handshake className="h-4 w-4" />
+                      <span>Relacionamento</span>
+                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {relationshipItems.map((item) => (
+                        <SidebarMenuSubItem key={item.url}>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive(item.url)}
+                            className="data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
+                          >
+                            <Link to={item.url}>
+                              <item.icon className="h-4 w-4" />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+
+              <Collapsible
+                asChild
+                open={supportOpen}
+                onOpenChange={setSupportOpen}
+                className="group/support-collapsible"
+              >
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton tooltip="Suporte Técnico">
+                      <Headset className="h-4 w-4" />
+                      <span>Suporte Técnico</span>
+                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/support-collapsible:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="px-9 py-1 text-xs text-muted-foreground">
+                      Nenhuma rotina disponível
+                    </div>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+
+              {generalItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
                     tooltip={item.title}
-                    className="data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-medium"
+                    className="data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
                   >
                     <Link to={item.url}>
                       <item.icon className="h-4 w-4" />
