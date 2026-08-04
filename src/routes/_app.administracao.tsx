@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { History, List, Plus, Trash2, Users } from "lucide-react";
+import { History, List, Plus, ShieldCheck, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import {
 import { ErrorState, ForbiddenState, LoadingState } from "@/components/state-views";
 import { useAuth, type DbRole } from "@/lib/mock-role";
 import { supabase } from "@/integrations/supabase/client";
+import { RolesPanel } from "@/components/admin/roles-panel";
 import {
   Table,
   TableBody,
@@ -70,9 +71,9 @@ const LISTS: Array<{ table: OptionTable; title: string }> = [
 ];
 
 function AdministracaoPage() {
-  const { role } = useAuth();
+  const { role, rbacEnabled, hasPermission } = useAuth();
 
-  if (role !== "administrador") {
+  if (rbacEnabled ? !hasPermission("administration.view") : role !== "administrador") {
     return (
       <>
         <PageHeader title="Administração" />
@@ -99,6 +100,9 @@ function AdministracaoPage() {
           <TabsTrigger value="listas">
             <List className="mr-2 h-4 w-4" /> Listas
           </TabsTrigger>
+          <TabsTrigger value="cargos">
+            <ShieldCheck className="mr-2 h-4 w-4" /> Cargos e permissões
+          </TabsTrigger>
           <TabsTrigger value="historico">
             <History className="mr-2 h-4 w-4" /> Histórico
           </TabsTrigger>
@@ -111,6 +115,9 @@ function AdministracaoPage() {
           {LISTS.map((list) => (
             <ListManager key={list.table} {...list} />
           ))}
+        </TabsContent>
+        <TabsContent value="cargos" className="mt-4">
+          <RolesPanel />
         </TabsContent>
         <TabsContent value="historico" className="mt-4">
           <AdminHistory />
@@ -125,23 +132,58 @@ function UsersPanel() {
   const query = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const modern = await supabase
+        .from("profiles")
+        .select("id, nome, email, role, ativo, cargo_id")
+        .is("deleted_at", null)
+        .order("nome");
+      const cargos = await supabase
+        .from("cargos")
+        .select("id, codigo, nome, perfil_base, ativo, protegido")
+        .order("nome");
+      if (!modern.error && !cargos.error) {
+        return { profiles: modern.data ?? [], cargos: cargos.data ?? [], rbacAvailable: true };
+      }
+
+      // Compatibilidade de deploy: a tela continua funcional enquanto a migration
+      // ainda nao foi aplicada e usa o RPC legado durante esse intervalo.
+      const legacy = await supabase
         .from("profiles")
         .select("id, nome, email, role, ativo")
         .is("deleted_at", null)
         .order("nome");
-      if (error) throw error;
-      return data ?? [];
+      if (legacy.error) throw legacy.error;
+      return {
+        profiles: (legacy.data ?? []).map((item) => ({ ...item, cargo_id: null })),
+        cargos: [],
+        rbacAvailable: false,
+      };
     },
   });
 
   const mutation = useMutation({
-    mutationFn: async ({ id, role, ativo }: { id: string; role: DbRole; ativo: boolean }) => {
-      const { error } = await supabase.rpc("admin_update_user", {
-        target_user_id: id,
-        next_role: role,
-        next_active: ativo,
-      });
+    mutationFn: async ({
+      id,
+      role,
+      cargoId,
+      ativo,
+    }: {
+      id: string;
+      role: DbRole;
+      cargoId: string | null;
+      ativo: boolean;
+    }) => {
+      const { error } = cargoId
+        ? await supabase.rpc("admin_assign_user_cargo", {
+            target_user_id: id,
+            next_cargo_id: cargoId,
+            next_active: ativo,
+          })
+        : await supabase.rpc("admin_update_user", {
+            target_user_id: id,
+            next_role: role,
+            next_active: ativo,
+          });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -159,7 +201,10 @@ function UsersPanel() {
   if (query.isError)
     return <ErrorState title="Erro ao carregar usuários" description={query.error.message} />;
 
-  const activeAdminCount = (query.data ?? []).filter(
+  if (!query.data) return null;
+  const data = query.data;
+
+  const activeAdminCount = data.profiles.filter(
     (profile) => profile.role === "admin" && profile.ativo,
   ).length;
 
@@ -175,7 +220,7 @@ function UsersPanel() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {(query.data ?? []).map((profile) => {
+          {data.profiles.map((profile) => {
             const isOnlyActiveAdmin =
               profile.role === "admin" && profile.ativo && activeAdminCount === 1;
 
@@ -185,25 +230,35 @@ function UsersPanel() {
                 <TableCell className="text-muted-foreground">{profile.email}</TableCell>
                 <TableCell>
                   <Select
-                    value={profile.role}
+                    value={data.rbacAvailable ? (profile.cargo_id ?? "") : profile.role}
                     disabled={mutation.isPending || isOnlyActiveAdmin}
-                    onValueChange={(nextRole) =>
+                    onValueChange={(value) => {
+                      const cargo = data.cargos.find((item) => item.id === value);
                       mutation.mutate({
                         id: profile.id,
-                        role: nextRole as DbRole,
+                        role: cargo?.perfil_base ?? (value as DbRole),
+                        cargoId: cargo?.id ?? null,
                         ativo: profile.ativo,
-                      })
-                    }
+                      });
+                    }}
                   >
                     <SelectTrigger className="w-44" aria-label={`Perfil de ${profile.nome}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(Object.keys(ROLE_LABEL) as DbRole[]).map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {ROLE_LABEL[value]}
-                        </SelectItem>
-                      ))}
+                      {data.rbacAvailable
+                        ? data.cargos
+                            .filter((cargo) => cargo.ativo)
+                            .map((cargo) => (
+                              <SelectItem key={cargo.id} value={cargo.id}>
+                                {cargo.nome}
+                              </SelectItem>
+                            ))
+                        : (Object.keys(ROLE_LABEL) as DbRole[]).map((value) => (
+                            <SelectItem key={value} value={value}>
+                              {ROLE_LABEL[value]}
+                            </SelectItem>
+                          ))}
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -222,6 +277,7 @@ function UsersPanel() {
                         mutation.mutate({
                           id: profile.id,
                           role: profile.role,
+                          cargoId: data.rbacAvailable ? profile.cargo_id : null,
                           ativo,
                         })
                       }
@@ -425,6 +481,8 @@ function AdminHistory() {
     queryFn: async () => {
       const entities = [
         "profiles",
+        "cargos",
+        "access_control_settings",
         "categoria_gargalo_options",
         "pitstop_options",
         "canal_atendimento_options",
