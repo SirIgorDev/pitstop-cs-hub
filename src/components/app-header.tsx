@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronDown, LogOut, User as UserIcon } from "lucide-react";
+import { ChevronDown, LogOut, Moon, Sun, User as UserIcon } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -16,11 +16,14 @@ import { ROLE_LABEL, useAuth } from "@/lib/mock-role";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfileDialog } from "@/components/profile-dialog";
+import { Switch } from "@/components/ui/switch";
+import { useTheme } from "@/components/theme-provider";
 
 export function AppHeader() {
   const { user, role, signOut } = useAuth();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const initials = user.nome
     .split(" ")
@@ -76,6 +79,31 @@ export function AppHeader() {
           <DropdownMenuItem onSelect={() => setProfileOpen(true)}>
             <UserIcon className="mr-2 h-4 w-4" /> Meu perfil
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="pb-1 text-xs font-normal text-muted-foreground">
+            Tema
+          </DropdownMenuLabel>
+          <DropdownMenuItem
+            className="flex cursor-pointer items-center"
+            onSelect={(event) => {
+              event.preventDefault();
+              toggleTheme();
+            }}
+          >
+            {theme === "dark" ? (
+              <Moon className="mr-2 h-4 w-4" />
+            ) : (
+              <Sun className="mr-2 h-4 w-4" />
+            )}
+            <span className="flex-1">{theme === "dark" ? "Tema escuro" : "Tema claro"}</span>
+            <Switch
+              checked={theme === "dark"}
+              tabIndex={-1}
+              aria-label="Alternar entre tema claro e tema escuro"
+              className="pointer-events-none"
+            />
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
             onClick={() => void handleSignOut()}

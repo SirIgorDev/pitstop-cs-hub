@@ -98,8 +98,49 @@
 }
 
 .dark {
-  --background: #ffffff;
-  --foreground: #333333;
+  --background: #111315;
+  --surface: #0b0d0f;
+  --foreground: #f4f4f5;
+
+  --card: #17191c;
+  --card-foreground: #f4f4f5;
+  --popover: #1c1f23;
+  --popover-foreground: #f4f4f5;
+
+  --primary: #f04449;
+  --primary-foreground: #ffffff;
+  --primary-dark: #c92329;
+
+  --secondary: #202327;
+  --secondary-foreground: #f4f4f5;
+
+  --muted: #24272b;
+  --muted-foreground: #a8adb4;
+
+  --accent: #2b2f34;
+  --accent-foreground: #f4f4f5;
+
+  --destructive: #f05252;
+  --destructive-foreground: #ffffff;
+
+  --success: #34d399;
+  --success-foreground: #071a12;
+
+  --warning: #fbbf24;
+  --warning-foreground: #211500;
+
+  --border: #34383e;
+  --input: #41464d;
+  --ring: #f04449;
+
+  --sidebar: #121417;
+  --sidebar-foreground: #f4f4f5;
+  --sidebar-primary: #f04449;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #24272b;
+  --sidebar-accent-foreground: #f4f4f5;
+  --sidebar-border: #2d3136;
+  --sidebar-ring: #f04449;
 }
 
 @layer base {
@@ -116,7 +157,20 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     color: var(--color-foreground);
     letter-spacing: -0.01em;
   }
