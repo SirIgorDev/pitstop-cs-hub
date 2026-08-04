@@ -130,7 +130,7 @@ export function RolesPanel() {
         escopo,
       }));
       const { error } = await supabase.rpc("admin_save_cargo", {
-        target_cargo_id: form.id as unknown as string,
+        target_cargo_id: form.id,
         cargo_name: form.nome,
         cargo_description: form.descricao,
         base_role: form.perfilBase,
