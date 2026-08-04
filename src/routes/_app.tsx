@@ -50,9 +50,9 @@ function AppLayout() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-surface">
+      <div className="flex h-svh w-full overflow-hidden bg-surface">
         <AppSidebar />
-        <SidebarInset className="flex min-w-0 flex-1 flex-col bg-surface">
+        <SidebarInset className="flex h-svh min-w-0 flex-1 flex-col overflow-hidden bg-surface">
           <AppHeader />
           <main className="flex-1 overflow-auto">
             <div className="mx-auto w-full max-w-7xl px-6 py-8">

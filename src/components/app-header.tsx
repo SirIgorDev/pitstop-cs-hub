@@ -36,7 +36,7 @@ export function AppHeader() {
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-4 shadow-sm backdrop-blur">
       <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
       <Separator orientation="vertical" className="h-6" />
       <div className="min-w-0 flex-1">
@@ -46,7 +46,10 @@ export function AppHeader() {
         </p>
       </div>
 
-      <Badge variant="outline" className="hidden border-border bg-muted text-muted-foreground sm:inline-flex">
+      <Badge
+        variant="outline"
+        className="hidden border-border bg-muted text-muted-foreground sm:inline-flex"
+      >
         {ROLE_LABEL[role]}
       </Badge>
 
