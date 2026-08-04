@@ -236,7 +236,7 @@ async function insertInBatches(rows: ProcessImportRowInsert[], size = 500) {
 }
 
 function ProcessamentoBasesPage() {
-  const { role, user } = useAuth();
+  const { role, user, rbacEnabled, hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -246,7 +246,9 @@ function ProcessamentoBasesPage() {
   const [exporting, setExporting] = useState(false);
   const [previewPage, setPreviewPage] = useState(0);
   const [previewPageSize, setPreviewPageSize] = useState<number>(50);
-  const canAccess = role === "analista_processos" || role === "administrador";
+  const canAccess = rbacEnabled
+    ? hasPermission("dispatch.view")
+    : role === "analista_processos" || role === "administrador";
 
   const currentQuery = useQuery({
     queryKey: ["process-import-current", user.id],
@@ -486,7 +488,10 @@ function ProcessamentoBasesPage() {
               accept=".csv,.xlsx"
               onChange={handleFile}
             />
-            <Button onClick={() => fileInput.current?.click()} disabled={reading || saving}>
+            <Button
+              onClick={() => fileInput.current?.click()}
+              disabled={reading || saving || !hasPermission("dispatch.import")}
+            >
               {reading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -511,22 +516,26 @@ function ProcessamentoBasesPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={exportCurrent} disabled={exporting}>
-                {exporting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                Exportar CSV
-              </Button>
-              <Button variant="outline" size="sm" onClick={deleteCurrent} disabled={deleting}>
-                {deleting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="mr-2 h-4 w-4" />
-                )}
-                Excluir
-              </Button>
+              {hasPermission("dispatch.export") && (
+                <Button variant="outline" size="sm" onClick={exportCurrent} disabled={exporting}>
+                  {exporting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  Exportar CSV
+                </Button>
+              )}
+              {hasPermission("dispatch.inactivate") && (
+                <Button variant="outline" size="sm" onClick={deleteCurrent} disabled={deleting}>
+                  {deleting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  Excluir
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -628,10 +637,7 @@ function ProcessamentoBasesPage() {
                   </TableHeader>
                   <TableBody>
                     {preview.result.rows
-                      .slice(
-                        previewPage * previewPageSize,
-                        (previewPage + 1) * previewPageSize,
-                      )
+                      .slice(previewPage * previewPageSize, (previewPage + 1) * previewPageSize)
                       .map((row) => (
                         <TableRow key={row.documento}>
                           <TableCell>{row.documento}</TableCell>
@@ -687,8 +693,7 @@ function ProcessamentoBasesPage() {
                     size="sm"
                     onClick={() => setPreviewPage((page) => page + 1)}
                     disabled={
-                      previewPage + 1 >=
-                      Math.ceil(preview.result.rows.length / previewPageSize)
+                      previewPage + 1 >= Math.ceil(preview.result.rows.length / previewPageSize)
                     }
                   >
                     Próxima

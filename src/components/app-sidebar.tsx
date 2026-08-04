@@ -36,6 +36,7 @@ type Item = {
   url: string;
   icon: typeof LayoutDashboard;
   roles: Role[];
+  permission: string;
 };
 
 const RELATIONSHIP_ITEMS: Item[] = [
@@ -44,30 +45,35 @@ const RELATIONSHIP_ITEMS: Item[] = [
     url: "/",
     icon: LayoutDashboard,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
+    permission: "pitstop.monitor.view",
   },
   {
     title: "Cadastro de PitStop",
     url: "/gargalos",
     icon: AlertOctagon,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
+    permission: "pitstop.records.view",
   },
   {
     title: "Monitor - Carteira",
     url: "/neo/dashboard",
     icon: LineChart,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
+    permission: "carteira.monitor.view",
   },
   {
     title: "Cadastro Neo",
     url: "/neo/registros",
     icon: ClipboardList,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
+    permission: "neo.records.view",
   },
   {
     title: "Base de Disparo",
     url: "/processamento-bases",
     icon: FileSpreadsheet,
     roles: ["analista_processos", "administrador"],
+    permission: "dispatch.view",
   },
 ];
 
@@ -77,23 +83,26 @@ const GENERAL_ITEMS: Item[] = [
     url: "/limpar-documento",
     icon: Eraser,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
+    permission: "document_cleaner.use",
   },
   {
     title: "Auditoria",
     url: "/auditoria",
     icon: ScrollText,
     roles: ["coordenador", "administrador"],
+    permission: "audit.view",
   },
   {
     title: "Administração",
     url: "/administracao",
     icon: Settings2,
     roles: ["administrador"],
+    permission: "administration.view",
   },
 ];
 
 export function AppSidebar() {
-  const { role } = useMockRole();
+  const { role, rbacEnabled, hasPermission } = useMockRole();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (routerState) => routerState.location.pathname });
@@ -105,8 +114,10 @@ export function AppSidebar() {
     return pathname === url || pathname.startsWith(`${url}/`);
   };
 
-  const relationshipItems = RELATIONSHIP_ITEMS.filter((item) => item.roles.includes(role));
-  const generalItems = GENERAL_ITEMS.filter((item) => item.roles.includes(role));
+  const canSee = (item: Item) =>
+    rbacEnabled ? hasPermission(item.permission) : item.roles.includes(role);
+  const relationshipItems = RELATIONSHIP_ITEMS.filter(canSee);
+  const generalItems = GENERAL_ITEMS.filter(canSee);
   const relationshipActive = relationshipItems.some((item) => isActive(item.url));
 
   return (

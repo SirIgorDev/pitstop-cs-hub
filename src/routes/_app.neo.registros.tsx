@@ -47,8 +47,10 @@ export const Route = createFileRoute("/_app/neo/registros")({
 const PAGE_SIZE = 15;
 
 function NeoRegistrosPage() {
-  const { role } = useAuth();
-  const isAnalyst = isIndividualAnalyst(role);
+  const { role, rbacEnabled, hasPermission, permissionScope } = useAuth();
+  const isAnalyst = rbacEnabled
+    ? permissionScope("neo.records.view") === "own"
+    : isIndividualAnalyst(role);
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -118,7 +120,10 @@ function NeoRegistrosPage() {
   });
 
   const query = useQuery({
-    queryKey: ["registros_neo", { search, mes, tipo, canal, esteira, status, responsavel, order, page }],
+    queryKey: [
+      "registros_neo",
+      { search, mes, tipo, canal, esteira, status, responsavel, order, page },
+    ],
     queryFn: async () => {
       let q = supabase
         .from("registros_neo")
@@ -219,7 +224,12 @@ function NeoRegistrosPage() {
           row.escalonou_para ?? "",
           row.observacao ?? "",
         ]
-          .map((value) => `"${String(value).replace(/"/g, '""').replace(/[\r\n]+/g, " ")}"`)
+          .map(
+            (value) =>
+              `"${String(value)
+                .replace(/"/g, '""')
+                .replace(/[\r\n]+/g, " ")}"`,
+          )
           .join(";"),
       );
     }
@@ -241,15 +251,17 @@ function NeoRegistrosPage() {
         title="Registros Neo"
         description="Atendimentos realizados pelo time nos canais Neo."
         actions={
-          <Button
-            className="bg-primary text-primary-foreground hover:bg-primary-dark"
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Novo registro
-          </Button>
+          hasPermission("neo.records.create") ? (
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary-dark"
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Novo registro
+            </Button>
+          ) : null
         }
       />
 
@@ -266,17 +278,75 @@ function NeoRegistrosPage() {
             }}
           />
         </div>
-        <FilterSelect value={mes} onChange={(v) => { setMes(v); setPage(1); }} placeholder="Mês" options={[{ value: "all", label: "Todos os meses" }, ...meses]} />
-        <FilterSelect value={tipo} onChange={(v) => { setTipo(v); setPage(1); }} placeholder="Tipo" options={[{ value: "all", label: "Todos tipos" }, ...TIPOS_NEO.map((s) => ({ value: s, label: s }))]} />
-        <FilterSelect value={canal} onChange={(v) => { setCanal(v); setPage(1); }} placeholder="Canal" options={[{ value: "all", label: "Todos os canais" }, ...(canaisQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
-        <FilterSelect value={esteira} onChange={(v) => { setEsteira(v); setPage(1); }} placeholder="Esteira" options={[{ value: "all", label: "Todas esteiras" }, ...(esteirasQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
-        <FilterSelect value={status} onChange={(v) => { setStatus(v); setPage(1); }} placeholder="Status" options={[{ value: "all", label: "Todos status" }, ...(statusQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome }))]} />
+        <FilterSelect
+          value={mes}
+          onChange={(v) => {
+            setMes(v);
+            setPage(1);
+          }}
+          placeholder="Mês"
+          options={[{ value: "all", label: "Todos os meses" }, ...meses]}
+        />
+        <FilterSelect
+          value={tipo}
+          onChange={(v) => {
+            setTipo(v);
+            setPage(1);
+          }}
+          placeholder="Tipo"
+          options={[
+            { value: "all", label: "Todos tipos" },
+            ...TIPOS_NEO.map((s) => ({ value: s, label: s })),
+          ]}
+        />
+        <FilterSelect
+          value={canal}
+          onChange={(v) => {
+            setCanal(v);
+            setPage(1);
+          }}
+          placeholder="Canal"
+          options={[
+            { value: "all", label: "Todos os canais" },
+            ...(canaisQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome })),
+          ]}
+        />
+        <FilterSelect
+          value={esteira}
+          onChange={(v) => {
+            setEsteira(v);
+            setPage(1);
+          }}
+          placeholder="Esteira"
+          options={[
+            { value: "all", label: "Todas esteiras" },
+            ...(esteirasQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome })),
+          ]}
+        />
+        <FilterSelect
+          value={status}
+          onChange={(v) => {
+            setStatus(v);
+            setPage(1);
+          }}
+          placeholder="Status"
+          options={[
+            { value: "all", label: "Todos status" },
+            ...(statusQ.data ?? []).map((s) => ({ value: s.nome, label: s.nome })),
+          ]}
+        />
         {!isAnalyst && (
           <FilterSelect
             value={responsavel}
-            onChange={(v) => { setResponsavel(v); setPage(1); }}
+            onChange={(v) => {
+              setResponsavel(v);
+              setPage(1);
+            }}
             placeholder="Responsável"
-            options={[{ value: "all", label: "Todos responsáveis" }, ...(analystsQ.data ?? []).map((a) => ({ value: a.id, label: a.nome }))]}
+            options={[
+              { value: "all", label: "Todos responsáveis" },
+              ...(analystsQ.data ?? []).map((a) => ({ value: a.id, label: a.nome })),
+            ]}
           />
         )}
         <Button
@@ -323,39 +393,49 @@ function NeoRegistrosPage() {
               <TableBody>
                 {query.data!.data.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{r.protocolo_neo}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {r.protocolo_neo}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDisplayDate(r.data_contato)}
                     </TableCell>
                     <TableCell className="font-medium text-foreground">{r.nome_cliente}</TableCell>
                     <TableCell className="text-muted-foreground">{r.tipo}</TableCell>
-                    <TableCell className="text-muted-foreground">{r.canal_atendimento ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {r.canal_atendimento ?? "—"}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{r.esteira}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="border-border bg-muted text-foreground">
                         {r.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{r.escalonou_para ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {r.escalonou_para ?? "—"}
+                    </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditing(r);
-                          setFormOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleting(r)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {hasPermission("neo.records.update") && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditing(r);
+                            setFormOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {hasPermission("neo.records.inactivate") && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleting(r)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -368,10 +448,20 @@ function NeoRegistrosPage() {
               Página {page} de {totalPages} · {total} registro(s)
             </span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+              >
                 Anterior
               </Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
                 Próxima
               </Button>
             </div>

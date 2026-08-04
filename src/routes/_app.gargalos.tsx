@@ -54,8 +54,10 @@ export const Route = createFileRoute("/_app/gargalos")({
 const PAGE_SIZE = 15;
 
 function GargalosPage() {
-  const { role } = useAuth();
-  const isAnalyst = isIndividualAnalyst(role);
+  const { role, rbacEnabled, hasPermission, permissionScope } = useAuth();
+  const isAnalyst = rbacEnabled
+    ? permissionScope("pitstop.records.view") === "own"
+    : isIndividualAnalyst(role);
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -76,17 +78,17 @@ function GargalosPage() {
     queryKey: ["profiles_ativos_all"],
     enabled: !isAnalyst,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, nome")
-        .order("nome");
+      const { data, error } = await supabase.from("profiles").select("id, nome").order("nome");
       if (error) throw error;
       return data;
     },
   });
 
   const query = useQuery({
-    queryKey: ["gargalos", { search, mes, segmento, responsavel, status, impacto, risco, order, page }],
+    queryKey: [
+      "gargalos",
+      { search, mes, segmento, responsavel, status, impacto, risco, order, page },
+    ],
     queryFn: async () => {
       let q = supabase
         .from("gargalos")
@@ -162,16 +164,43 @@ function GargalosPage() {
     const rows = query.data?.data ?? [];
     if (rows.length === 0) return toast.error("Nada para exportar");
     const headers = [
-      "ID","Data","Cliente","Segmento","Categoria","PitStop","Descrição","Impacto","Urgência","Status","Risco Churn","Prev. Resolução","Resolução","Tempo (dias)"
+      "ID",
+      "Data",
+      "Cliente",
+      "Segmento",
+      "Categoria",
+      "PitStop",
+      "Descrição",
+      "Impacto",
+      "Urgência",
+      "Status",
+      "Risco Churn",
+      "Prev. Resolução",
+      "Resolução",
+      "Tempo (dias)",
     ];
     const lines = [headers.join(";")];
     for (const r of rows) {
-      lines.push([
-        r.id, r.data_registro, r.cliente, r.segmento, r.categoria, r.pitstop ?? "",
-        (r.descricao ?? "").replace(/[\r\n;]/g, " "),
-        r.impacto_cliente, r.urgencia, r.status, r.risco_churn,
-        r.data_prevista_resolucao ?? "", r.data_resolucao ?? "", r.tempo_resolucao_dias ?? "",
-      ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";"));
+      lines.push(
+        [
+          r.id,
+          r.data_registro,
+          r.cliente,
+          r.segmento,
+          r.categoria,
+          r.pitstop ?? "",
+          (r.descricao ?? "").replace(/[\r\n;]/g, " "),
+          r.impacto_cliente,
+          r.urgencia,
+          r.status,
+          r.risco_churn,
+          r.data_prevista_resolucao ?? "",
+          r.data_resolucao ?? "",
+          r.tempo_resolucao_dias ?? "",
+        ]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(";"),
+      );
     }
     const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -188,15 +217,17 @@ function GargalosPage() {
         title="Gargalos"
         description="Registros de gargalos identificados junto aos clientes."
         actions={
-          <Button
-            className="bg-primary text-primary-foreground hover:bg-primary-dark"
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Novo gargalo
-          </Button>
+          hasPermission("pitstop.records.create") ? (
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary-dark"
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Novo gargalo
+            </Button>
+          ) : null
         }
       />
 
@@ -213,23 +244,83 @@ function GargalosPage() {
             }}
           />
         </div>
-        <FilterSelect value={mes} onChange={(v) => { setMes(v); setPage(1); }} placeholder="Mês" options={[{ value: "all", label: "Todos os meses" }, ...meses]} />
-        <FilterSelect value={segmento} onChange={(v) => { setSegmento(v); setPage(1); }} placeholder="Segmento" options={[{ value: "all", label: "Todos segmentos" }, ...SEGMENTOS_GARGALO.map((s) => ({ value: s, label: s }))]} />
+        <FilterSelect
+          value={mes}
+          onChange={(v) => {
+            setMes(v);
+            setPage(1);
+          }}
+          placeholder="Mês"
+          options={[{ value: "all", label: "Todos os meses" }, ...meses]}
+        />
+        <FilterSelect
+          value={segmento}
+          onChange={(v) => {
+            setSegmento(v);
+            setPage(1);
+          }}
+          placeholder="Segmento"
+          options={[
+            { value: "all", label: "Todos segmentos" },
+            ...SEGMENTOS_GARGALO.map((s) => ({ value: s, label: s })),
+          ]}
+        />
         {!isAnalyst && (
           <FilterSelect
             value={responsavel}
-            onChange={(v) => { setResponsavel(v); setPage(1); }}
+            onChange={(v) => {
+              setResponsavel(v);
+              setPage(1);
+            }}
             placeholder="Responsável"
-            options={[{ value: "all", label: "Todos responsáveis" }, ...(analystsQ.data ?? []).map((a) => ({ value: a.id, label: a.nome }))]}
+            options={[
+              { value: "all", label: "Todos responsáveis" },
+              ...(analystsQ.data ?? []).map((a) => ({ value: a.id, label: a.nome })),
+            ]}
           />
         )}
-        <FilterSelect value={status} onChange={(v) => { setStatus(v); setPage(1); }} placeholder="Status" options={[{ value: "all", label: "Todos status" }, ...STATUS_GARGALO.map((s) => ({ value: s, label: s }))]} />
-        <FilterSelect value={impacto} onChange={(v) => { setImpacto(v); setPage(1); }} placeholder="Impacto" options={[{ value: "all", label: "Todos impactos" }, ...IMPACTOS.map((s) => ({ value: s, label: s }))]} />
-        <FilterSelect value={risco} onChange={(v) => { setRisco(v); setPage(1); }} placeholder="Risco" options={[{ value: "all", label: "Todos riscos" }, ...RISCOS_CHURN.map((s) => ({ value: s, label: s }))]} />
+        <FilterSelect
+          value={status}
+          onChange={(v) => {
+            setStatus(v);
+            setPage(1);
+          }}
+          placeholder="Status"
+          options={[
+            { value: "all", label: "Todos status" },
+            ...STATUS_GARGALO.map((s) => ({ value: s, label: s })),
+          ]}
+        />
+        <FilterSelect
+          value={impacto}
+          onChange={(v) => {
+            setImpacto(v);
+            setPage(1);
+          }}
+          placeholder="Impacto"
+          options={[
+            { value: "all", label: "Todos impactos" },
+            ...IMPACTOS.map((s) => ({ value: s, label: s })),
+          ]}
+        />
+        <FilterSelect
+          value={risco}
+          onChange={(v) => {
+            setRisco(v);
+            setPage(1);
+          }}
+          placeholder="Risco"
+          options={[
+            { value: "all", label: "Todos riscos" },
+            ...RISCOS_CHURN.map((s) => ({ value: s, label: s })),
+          ]}
+        />
         <Button variant="outline" onClick={() => setOrder(order === "desc" ? "asc" : "desc")}>
           <ArrowDownUp className="mr-2 h-4 w-4" /> Data {order === "desc" ? "↓" : "↑"}
         </Button>
-        <Button variant="outline" onClick={exportCsv}>Exportar CSV</Button>
+        <Button variant="outline" onClick={exportCsv}>
+          Exportar CSV
+        </Button>
       </div>
 
       {query.isLoading ? (
@@ -286,24 +377,28 @@ function GargalosPage() {
                       {g.tempo_resolucao_dias != null ? `${g.tempo_resolucao_dias} d` : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditing(g);
-                          setFormOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleting(g)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {hasPermission("pitstop.records.update") && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditing(g);
+                            setFormOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {hasPermission("pitstop.records.inactivate") && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleting(g)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -344,8 +439,8 @@ function GargalosPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir gargalo?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação marcará o gargalo <strong>{deleting?.cliente}</strong> como excluído.
-              A operação fica registrada na auditoria.
+              Esta ação marcará o gargalo <strong>{deleting?.cliente}</strong> como excluído. A
+              operação fica registrada na auditoria.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
