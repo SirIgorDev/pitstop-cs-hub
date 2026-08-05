@@ -48,7 +48,7 @@ const RELATIONSHIP_ITEMS: Item[] = [
     permission: "pitstop.monitor.view",
   },
   {
-    title: "Cadastro de PitStop",
+    title: "Cadastro PitStop",
     url: "/gargalos",
     icon: AlertOctagon,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
