@@ -137,7 +137,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="min-w-0">
               <div className="text-sm font-semibold leading-tight text-foreground">
-                Controller CS
+                Fortes Controller
               </div>
               <div className="truncate text-xs text-muted-foreground">Fortes Tecnologia</div>
             </div>
