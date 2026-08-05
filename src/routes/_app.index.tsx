@@ -24,9 +24,13 @@ import { isIndividualAnalyst, useAuth } from "@/lib/mock-role";
 import { SEGMENTOS_GARGALO } from "@/lib/constants";
 
 export const Route = createFileRoute("/_app/")({
-  component: DashboardGargalos,
-  head: () => ({ meta: [{ title: "Dashboard de Gargalos — Controller CS" }] }),
+  component: HomePage,
+  head: () => ({ meta: [{ title: "Controller CS" }] }),
 });
+
+function HomePage() {
+  return null;
+}
 
 type GargaloDashboardRow = {
   categoria: string;
@@ -67,7 +71,7 @@ const IMPACT_COLORS: Record<string, string> = {
   Crítico: "#dc2626",
 };
 
-function DashboardGargalos() {
+export function DashboardGargalos() {
   const { role, user } = useAuth();
   const isAnalyst = isIndividualAnalyst(role);
   const queryClient = useQueryClient();

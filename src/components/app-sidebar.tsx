@@ -42,7 +42,7 @@ type Item = {
 const RELATIONSHIP_ITEMS: Item[] = [
   {
     title: "Monitor - PitStop",
-    url: "/",
+    url: "/pitstop",
     icon: LayoutDashboard,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
     permission: "pitstop.monitor.view",
@@ -103,7 +103,7 @@ const GENERAL_ITEMS: Item[] = [
 
 export function AppSidebar() {
   const { role, rbacEnabled, hasPermission } = useMockRole();
-  const { state } = useSidebar();
+  const { state, setOpen } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (routerState) => routerState.location.pathname });
   const [relationshipOpen, setRelationshipOpen] = useState(true);
@@ -125,7 +125,10 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-2 py-3">
+        <Link
+          to="/"
+          className="flex items-center gap-2 rounded-md px-2 py-3 hover:bg-sidebar-accent"
+        >
           <img
             src="/fortes-oficial.jpg"
             alt="Fortes Tecnologia"
@@ -139,7 +142,7 @@ export function AppSidebar() {
               <div className="truncate text-xs text-muted-foreground">Fortes Tecnologia</div>
             </div>
           )}
-        </div>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>
@@ -151,7 +154,14 @@ export function AppSidebar() {
                 <Collapsible
                   asChild
                   open={relationshipOpen}
-                  onOpenChange={setRelationshipOpen}
+                  onOpenChange={(open) => {
+                    if (collapsed) {
+                      setOpen(true);
+                      setRelationshipOpen(true);
+                      return;
+                    }
+                    setRelationshipOpen(open);
+                  }}
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>
@@ -192,7 +202,14 @@ export function AppSidebar() {
                 <Collapsible
                   asChild
                   open={supportOpen}
-                  onOpenChange={setSupportOpen}
+                  onOpenChange={(open) => {
+                    if (collapsed) {
+                      setOpen(true);
+                      setSupportOpen(true);
+                      return;
+                    }
+                    setSupportOpen(open);
+                  }}
                   className="group/support-collapsible"
                 >
                   <SidebarMenuItem>
