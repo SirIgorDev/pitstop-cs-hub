@@ -1,22 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   FileSpreadsheet,
   Loader2,
+  Search,
   ShieldCheck,
   Trash2,
   Upload,
 } from "lucide-react";
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { ForbiddenState } from "@/components/state-views";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -39,6 +51,27 @@ type SummaryPreview = { file: File; parsed: ParsedChurnSummary };
 type DetailPreview = { file: File; parsed: ParsedChurnDetail };
 type ChurnSummaryInsert = Database["public"]["Tables"]["churn_summary"]["Insert"];
 type ChurnRecordInsert = Database["public"]["Tables"]["churn_records"]["Insert"];
+type ChurnImport = Pick<
+  Database["public"]["Tables"]["churn_imports"]["Row"],
+  "id" | "competencia" | "versao" | "status" | "owner_id" | "created_at"
+> & { ownerName: string };
+type ChurnSummary = Database["public"]["Tables"]["churn_summary"]["Row"];
+type ChurnRecord = Database["public"]["Tables"]["churn_records"]["Row"];
+
+type ConsolidatedClient = {
+  clientId: string;
+  clientName: string;
+  unitName: string;
+  macroReasons: string[];
+  services: string[];
+  cancellationReasons: string[];
+  cancellationValue: number;
+  cancellationDate: string | null;
+};
+
+const churnChartConfig = {
+  valor: { label: "Churn", color: "var(--primary)" },
+} satisfies ChartConfig;
 
 function normalizeReason(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
@@ -53,6 +86,72 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+function formatCompetence(value: string, version: number) {
+  const [year, month] = value.split("-").map(Number);
+  const label = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
+    new Date(year, month - 1, 1),
+  );
+  return `${label.charAt(0).toUpperCase()}${label.slice(1)} · v${version}`;
+}
+
+function consolidateClients(records: ChurnRecord[]): ConsolidatedClient[] {
+  const clients = new Map<string, ConsolidatedClient & {
+    macroReasonSet: Set<string>;
+    serviceSet: Set<string>;
+    cancellationReasonSet: Set<string>;
+  }>();
+
+  for (const row of records) {
+    const key = row.client_id.trim() || `${row.client_name}-${row.unit_name ?? ""}`;
+    const current = clients.get(key) ?? {
+      clientId: row.client_id,
+      clientName: row.client_name,
+      unitName: row.unit_name ?? "",
+      macroReasons: [],
+      services: [],
+      cancellationReasons: [],
+      cancellationValue: 0,
+      cancellationDate: row.cancellation_date,
+      macroReasonSet: new Set<string>(),
+      serviceSet: new Set<string>(),
+      cancellationReasonSet: new Set<string>(),
+    };
+    current.macroReasonSet.add(row.macro_reason);
+    if (row.service_product) current.serviceSet.add(row.service_product);
+    if (row.cancellation_reason) current.cancellationReasonSet.add(row.cancellation_reason);
+    current.cancellationValue += Number(row.cancellation_value) || 0;
+    if (row.cancellation_date && (!current.cancellationDate || row.cancellation_date > current.cancellationDate)) {
+      current.cancellationDate = row.cancellation_date;
+    }
+    clients.set(key, current);
+  }
+
+  return [...clients.values()]
+    .map(({ macroReasonSet, serviceSet, cancellationReasonSet, ...client }) => ({
+      ...client,
+      macroReasons: [...macroReasonSet].sort(),
+      services: [...serviceSet].sort(),
+      cancellationReasons: [...cancellationReasonSet].sort(),
+    }))
+    .sort((a, b) => b.cancellationValue - a.cancellationValue);
+}
+
+async function fetchAllChurnRecords(importId: string) {
+  const records: ChurnRecord[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from("churn_records")
+      .select("*")
+      .eq("import_id", importId)
+      .order("source_row")
+      .range(from, from + 999);
+    if (error) throw error;
+    records.push(...((data ?? []) as ChurnRecord[]));
+    if (!data || data.length < 1000) break;
+  }
+  return records;
+}
+
 async function insertBatches<T extends Record<string, unknown>>(table: "churn_summary" | "churn_records", rows: T[]) {
   for (let index = 0; index < rows.length; index += 400) {
     const { error } = await supabase.from(table).insert(rows.slice(index, index + 400) as never);
@@ -62,6 +161,7 @@ async function insertBatches<T extends Record<string, unknown>>(table: "churn_su
 
 function ChurnPage() {
   const { role, user, rbacEnabled, hasPermission, permissionScope } = useAuth();
+  const queryClient = useQueryClient();
   const summaryInput = useRef<HTMLInputElement>(null);
   const detailInput = useRef<HTMLInputElement>(null);
   const [competence, setCompetence] = useState(defaultCompetence);
@@ -70,10 +170,83 @@ function ChurnPage() {
   const [reading, setReading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [selectedImportId, setSelectedImportId] = useState("");
+  const [macroFilter, setMacroFilter] = useState("all");
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientPage, setClientPage] = useState(0);
   const canAccess = rbacEnabled
     ? hasPermission("churn.view")
     : role === "analista_processos" || role === "coordenador" || role === "administrador";
   const canImport = rbacEnabled ? hasPermission("churn.import") : canAccess;
+
+  const importsQuery = useQuery({
+    queryKey: ["churn-imports", user.id],
+    enabled: canAccess && Boolean(user.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("churn_imports")
+        .select("id, competencia, versao, status, owner_id, created_at")
+        .eq("ativo", true)
+        .in("status", ["ready", "partial"])
+        .order("competencia", { ascending: false })
+        .order("versao", { ascending: false });
+      if (error) throw error;
+      const ownerIds = [...new Set((data ?? []).map((item) => item.owner_id))];
+      const { data: profiles, error: profilesError } = ownerIds.length
+        ? await supabase.from("profiles").select("id, nome").in("id", ownerIds)
+        : { data: [], error: null };
+      if (profilesError) throw profilesError;
+      const ownerNames = new Map((profiles ?? []).map((profile) => [profile.id, profile.nome]));
+      return (data ?? []).map((item) => ({
+        ...item,
+        ownerName: ownerNames.get(item.owner_id) ?? "Responsável não identificado",
+      })) as ChurnImport[];
+    },
+  });
+
+  useEffect(() => {
+    if (!selectedImportId && importsQuery.data?.[0]?.id) {
+      setSelectedImportId(importsQuery.data[0].id);
+    }
+  }, [importsQuery.data, selectedImportId]);
+
+  const dashboardQuery = useQuery({
+    queryKey: ["churn-dashboard", selectedImportId],
+    enabled: Boolean(selectedImportId),
+    queryFn: async () => {
+      const [{ data: summaryRows, error: summaryError }, records] = await Promise.all([
+        supabase
+          .from("churn_summary")
+          .select("*")
+          .eq("import_id", selectedImportId)
+          .order("churn_value", { ascending: false }),
+        fetchAllChurnRecords(selectedImportId),
+      ]);
+      if (summaryError) throw summaryError;
+      return { summary: (summaryRows ?? []) as ChurnSummary[], records };
+    },
+  });
+
+  const consolidatedClients = useMemo(
+    () => consolidateClients(dashboardQuery.data?.records ?? []),
+    [dashboardQuery.data?.records],
+  );
+  const filteredClients = useMemo(() => {
+    const search = clientSearch.trim().toLocaleLowerCase("pt-BR");
+    return consolidatedClients.filter((client) => {
+      const matchesMacro = macroFilter === "all" || client.macroReasons.includes(macroFilter);
+      const matchesSearch = !search || [client.clientId, client.clientName, client.unitName, ...client.services]
+        .some((value) => value.toLocaleLowerCase("pt-BR").includes(search));
+      return matchesMacro && matchesSearch;
+    });
+  }, [clientSearch, consolidatedClients, macroFilter]);
+  const clientPageSize = 50;
+  const clientPageCount = Math.max(1, Math.ceil(filteredClients.length / clientPageSize));
+  const visibleClients = filteredClients.slice(clientPage * clientPageSize, (clientPage + 1) * clientPageSize);
+
+  useEffect(() => {
+    setClientPage(0);
+  }, [clientSearch, macroFilter, selectedImportId]);
 
   const summaryReasons = useMemo(
     () => new Set(summary?.parsed.rows.map((row) => normalizeReason(row.macroReason)) ?? []),
@@ -238,6 +411,11 @@ function ChurnPage() {
         .eq("id", importId);
       if (finishError) throw finishError;
       setProgress(100);
+      setSelectedImportId(importId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["churn-imports"] }),
+        queryClient.invalidateQueries({ queryKey: ["churn-dashboard", importId] }),
+      ]);
       toast.success("Importação de churn concluída");
       setSummary(null);
       setDetails([]);
@@ -259,7 +437,108 @@ function ChurnPage() {
 
   return (
     <>
-      <PageHeader title="Monitor de Churn" description="Importe o resumo mensal e um detalhamento para cada macromotivo." />
+      <PageHeader title="Monitor de Churn" description="Analise o churn por macromotivo e consulte cada cliente com seus serviços consolidados." />
+
+      {!!importsQuery.data?.length && (
+        <div className="mb-6 space-y-6">
+          <Card>
+            <CardHeader className="gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <CardTitle>Visão gerencial</CardTitle>
+                <CardDescription>Valores e clientes da competência selecionada, sem percentuais ou filtros do BI.</CardDescription>
+              </div>
+              <div className="w-full space-y-2 md:w-72">
+                <Label htmlFor="churn-import-select">Competência importada</Label>
+                <Select value={selectedImportId} onValueChange={setSelectedImportId}>
+                  <SelectTrigger id="churn-import-select"><SelectValue placeholder="Selecione uma importação" /></SelectTrigger>
+                  <SelectContent>
+                    {importsQuery.data.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {formatCompetence(item.competencia, item.versao)}
+                        {scope === "all" ? ` · ${item.ownerName}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {dashboardQuery.isLoading && (
+            <Card><CardContent className="flex items-center justify-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" />Carregando indicadores…</CardContent></Card>
+          )}
+          {dashboardQuery.isError && (
+            <Card className="border-destructive/40"><CardContent className="py-8 text-center text-sm text-destructive">Não foi possível carregar esta importação: {dashboardQuery.error.message}</CardContent></Card>
+          )}
+          {dashboardQuery.data && (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  ["Churn total", formatCurrency(dashboardQuery.data.summary.reduce((total, row) => total + Number(row.churn_value), 0))],
+                  ["Clientes únicos", consolidatedClients.length],
+                  ["Serviços cancelados", dashboardQuery.data.records.length],
+                  ["Macromotivos", dashboardQuery.data.summary.length],
+                ].map(([label, value]) => (
+                  <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></CardContent></Card>
+                ))}
+              </div>
+
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Churn por macromotivo</CardTitle><CardDescription>Valor absoluto informado no arquivo-resumo.</CardDescription></CardHeader>
+                  <CardContent>
+                    <ChartContainer config={churnChartConfig} className="h-[320px] w-full">
+                      <BarChart data={dashboardQuery.data.summary.map((row) => ({ nome: row.macro_reason, valor: Number(row.churn_value) }))} layout="vertical" margin={{ left: 10, right: 24 }}>
+                        <CartesianGrid horizontal={false} />
+                        <YAxis dataKey="nome" type="category" width={155} tickLine={false} axisLine={false} tickFormatter={(value) => value.length > 24 ? `${value.slice(0, 24)}…` : value} />
+                        <XAxis type="number" hide />
+                        <ChartTooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />} />
+                        <Bar dataKey="valor" fill="var(--color-valor)" radius={4} />
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Resumo da competência</CardTitle><CardDescription>Quantidade e valor por motivo.</CardDescription></CardHeader>
+                  <CardContent className="max-h-[380px] overflow-auto">
+                    <Table><TableHeader><TableRow><TableHead>Macromotivo</TableHead><TableHead className="text-right">Qtd.</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                      <TableBody>{dashboardQuery.data.summary.map((row) => <TableRow key={row.id}><TableCell>{row.macro_reason}</TableCell><TableCell className="text-right">{row.churn_quantity}</TableCell><TableCell className="text-right font-medium">{formatCurrency(Number(row.churn_value))}</TableCell></TableRow>)}</TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Clientes consolidados</CardTitle>
+                  <CardDescription>Cada cliente aparece uma vez; todos os serviços cancelados permanecem visíveis.</CardDescription>
+                  <div className="grid gap-3 pt-3 md:grid-cols-[minmax(0,1fr)_280px]">
+                    <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={clientSearch} onChange={(event) => setClientSearch(event.target.value)} placeholder="Buscar cliente, ID, unidade ou serviço…" className="pl-9" /></div>
+                    <Select value={macroFilter} onValueChange={setMacroFilter}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos os macromotivos</SelectItem>{dashboardQuery.data.summary.map((row) => <SelectItem key={row.id} value={row.macro_reason}>{row.macro_reason}</SelectItem>)}</SelectContent></Select>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Macromotivo</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                        {visibleClients.map((client) => (
+                          <TableRow key={client.clientId}><TableCell className="font-mono text-xs">{client.clientId}</TableCell><TableCell><p className="font-medium">{client.clientName}</p>{client.unitName && <p className="text-xs text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="flex max-w-64 flex-wrap gap-1">{client.macroReasons.map((reason) => <Badge key={reason} variant="outline">{reason}</Badge>)}</div></TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
+                        ))}
+                        {!visibleClients.length && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between border-t pt-4 text-sm text-muted-foreground">
+                    <span>{filteredClients.length} cliente(s)</span>
+                    <div className="flex items-center gap-2"><Button variant="outline" size="icon" disabled={clientPage === 0} onClick={() => setClientPage((page) => page - 1)}><ChevronLeft className="h-4 w-4" /><span className="sr-only">Página anterior</span></Button><span>Página {clientPage + 1} de {clientPageCount}</span><Button variant="outline" size="icon" disabled={clientPage + 1 >= clientPageCount} onClick={() => setClientPage((page) => page + 1)}><ChevronRight className="h-4 w-4" /><span className="sr-only">Próxima página</span></Button></div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
           <CardHeader>
