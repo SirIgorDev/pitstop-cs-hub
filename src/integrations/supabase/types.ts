@@ -865,7 +865,7 @@ export type Database = {
           cargo_description: string
           cargo_name: string
           permission_entries: Json
-          target_cargo_id: string | null
+          target_cargo_id: string
         }
         Returns: string
       }
