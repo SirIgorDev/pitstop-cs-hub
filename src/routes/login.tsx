@@ -13,7 +13,7 @@ import { AppFooter } from "@/components/app-footer";
 export const Route = createFileRoute("/login")({
   component: LoginPage,
   head: () => ({
-    meta: [{ title: "Entrar — Controller CS" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "Entrar — Fortes Controller" }, { name: "robots", content: "noindex" }],
   }),
 });
 
@@ -41,7 +41,7 @@ function LoginPage() {
       toast.error("Não foi possível entrar", { description: error.message });
       return;
     }
-    toast.success("Bem-vindo(a) ao Controller CS");
+    toast.success("Bem-vindo(a) ao Fortes Controller");
     navigate({ to: "/" });
   };
 
@@ -81,13 +81,13 @@ function LoginPage() {
             <div className="text-sm font-semibold uppercase tracking-wider opacity-90">
               Fortes Tecnologia
             </div>
-            <div className="text-xs opacity-70">Customer Success</div>
+            <div className="text-xs opacity-70">Controller</div>
           </div>
         </div>
 
         <div className="w-full max-w-md text-center">
           <h2 className="text-left text-3xl font-semibold leading-tight text-white">
-            Controller CS
+            Fortes Controller
           </h2>
           <p className="mt-3 text-center text-sm leading-relaxed text-white/90">
             Acompanhe indicadores em tempo real e reduza o trabalho manual
@@ -113,13 +113,13 @@ function LoginPage() {
               className="h-12 w-12 rounded-md bg-white object-contain p-1"
             />
             <div>
-              <div className="text-sm font-semibold text-foreground">Controller CS</div>
+              <div className="text-sm font-semibold text-foreground">Fortes Controller</div>
               <div className="text-xs text-muted-foreground">Fortes Tecnologia</div>
             </div>
           </div>
 
           <h1 className="text-center text-2xl font-semibold text-foreground">
-            Acesse o Controller CS
+            Acesse o Fortes Controller
           </h1>
           <p className="mt-1 text-center text-sm text-muted-foreground">
             Use seu e-mail corporativo da Fortes Tecnologia.
