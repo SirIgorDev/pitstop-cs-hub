@@ -218,6 +218,236 @@ export type Database = {
         }
         Relationships: []
       }
+      churn_files: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string
+          error_message: string | null
+          file_name: string
+          id: string
+          import_id: string
+          imported_rows: number
+          invalid_rows: number
+          macro_reason: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          valid_rows: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by: string
+          error_message?: string | null
+          file_name: string
+          id?: string
+          import_id: string
+          imported_rows?: number
+          invalid_rows?: number
+          macro_reason?: string | null
+          status?: string
+          tipo: string
+          updated_at?: string
+          valid_rows?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string
+          error_message?: string | null
+          file_name?: string
+          id?: string
+          import_id?: string
+          imported_rows?: number
+          invalid_rows?: number
+          macro_reason?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valid_rows?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "churn_files_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "churn_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      churn_imports: {
+        Row: {
+          ativo: boolean
+          competencia: string
+          created_at: string
+          error_message: string | null
+          id: string
+          owner_id: string
+          processed_at: string | null
+          status: string
+          updated_at: string
+          versao: number
+        }
+        Insert: {
+          ativo?: boolean
+          competencia: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          owner_id: string
+          processed_at?: string | null
+          status?: string
+          updated_at?: string
+          versao?: number
+        }
+        Update: {
+          ativo?: boolean
+          competencia?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          owner_id?: string
+          processed_at?: string | null
+          status?: string
+          updated_at?: string
+          versao?: number
+        }
+        Relationships: []
+      }
+      churn_records: {
+        Row: {
+          acquisition_date: string | null
+          cancellation_date: string | null
+          cancellation_reason: string | null
+          cancellation_value: number
+          churn_type: string | null
+          client_id: string
+          client_name: string
+          client_status: string | null
+          created_at: string
+          file_id: string
+          id: string
+          import_id: string
+          macro_reason: string
+          market: string | null
+          modality: string | null
+          observation: string | null
+          plan_name: string | null
+          revenue_type: string | null
+          service_product: string
+          source_row: number
+          unit_name: string | null
+        }
+        Insert: {
+          acquisition_date?: string | null
+          cancellation_date?: string | null
+          cancellation_reason?: string | null
+          cancellation_value?: number
+          churn_type?: string | null
+          client_id: string
+          client_name?: string
+          client_status?: string | null
+          created_at?: string
+          file_id: string
+          id?: string
+          import_id: string
+          macro_reason: string
+          market?: string | null
+          modality?: string | null
+          observation?: string | null
+          plan_name?: string | null
+          revenue_type?: string | null
+          service_product?: string
+          source_row: number
+          unit_name?: string | null
+        }
+        Update: {
+          acquisition_date?: string | null
+          cancellation_date?: string | null
+          cancellation_reason?: string | null
+          cancellation_value?: number
+          churn_type?: string | null
+          client_id?: string
+          client_name?: string
+          client_status?: string | null
+          created_at?: string
+          file_id?: string
+          id?: string
+          import_id?: string
+          macro_reason?: string
+          market?: string | null
+          modality?: string | null
+          observation?: string | null
+          plan_name?: string | null
+          revenue_type?: string | null
+          service_product?: string
+          source_row?: number
+          unit_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "churn_records_file_fk"
+            columns: ["file_id", "import_id"]
+            isOneToOne: false
+            referencedRelation: "churn_files"
+            referencedColumns: ["id", "import_id"]
+          },
+          {
+            foreignKeyName: "churn_records_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "churn_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      churn_summary: {
+        Row: {
+          churn_quantity: number
+          churn_value: number
+          created_at: string
+          file_id: string
+          id: string
+          import_id: string
+          macro_reason: string
+        }
+        Insert: {
+          churn_quantity: number
+          churn_value: number
+          created_at?: string
+          file_id: string
+          id?: string
+          import_id: string
+          macro_reason: string
+        }
+        Update: {
+          churn_quantity?: number
+          churn_value?: number
+          created_at?: string
+          file_id?: string
+          id?: string
+          import_id?: string
+          macro_reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "churn_summary_file_fk"
+            columns: ["file_id", "import_id"]
+            isOneToOne: false
+            referencedRelation: "churn_files"
+            referencedColumns: ["id", "import_id"]
+          },
+          {
+            foreignKeyName: "churn_summary_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "churn_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       escalonou_para_options: {
         Row: {
           ativo: boolean
