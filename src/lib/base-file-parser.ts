@@ -1,4 +1,5 @@
 import type { RawBaseRow } from "./base-processing.ts";
+import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
 type CellValue = string | number | boolean | Date | null | undefined;
 
@@ -10,6 +11,79 @@ export interface ParsedBaseFile {
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
+function excelColumnName(index: number): string {
+  let value = index + 1;
+  let result = "";
+  while (value > 0) {
+    value -= 1;
+    result = String.fromCharCode(65 + (value % 26)) + result;
+    value = Math.floor(value / 26);
+  }
+  return result;
+}
+
+function excelColumnIndex(reference: string): number {
+  const letters = reference.match(/^[A-Z]+/i)?.[0]?.toUpperCase() ?? "";
+  return [...letters].reduce((total, letter) => total * 26 + letter.charCodeAt(0) - 64, 0) - 1;
+}
+
+export function repairWorksheetXmlReferences(xml: string): string {
+  let fallbackRow = 0;
+  let maxRow = 0;
+  let maxColumn = 0;
+  const source = xml.replace(/<(?:[A-Za-z_][\w.-]*:)?row\b[^>]*\/\s*>/g, "");
+
+  const repaired = source.replace(
+    /<((?:[A-Za-z_][\w.-]*:)?row)\b([^>]*)>([\s\S]*?)<\/\1>/g,
+    (rowXml, rowTag: string, rowAttributes: string, rowContent: string) => {
+      const explicitRow = rowAttributes.match(/\br\s*=\s*["'](\d+)["']/)?.[1];
+      const rowNumber = explicitRow ? Number(explicitRow) : fallbackRow + 1;
+      fallbackRow = rowNumber;
+      maxRow = Math.max(maxRow, rowNumber);
+      let nextColumn = 0;
+
+      const repairedContent = rowContent.replace(
+        /<((?:[A-Za-z_][\w.-]*:)?c)\b([^>]*)>/g,
+        (cellXml, cellTag: string, rawAttributes: string) => {
+          const selfClosing = rawAttributes.trimEnd().endsWith("/");
+          const cellAttributes = selfClosing ? rawAttributes.trimEnd().slice(0, -1) : rawAttributes;
+          const explicitReference = cellAttributes.match(/\br\s*=\s*["']([^"']+)["']/)?.[1];
+          if (explicitReference) nextColumn = Math.max(excelColumnIndex(explicitReference), 0);
+          const reference = explicitReference ?? `${excelColumnName(nextColumn)}${rowNumber}`;
+          maxColumn = Math.max(maxColumn, nextColumn + 1);
+          nextColumn += 1;
+          if (explicitReference) return cellXml;
+          return `<${cellTag}${cellAttributes} r="${reference}"${selfClosing ? " /" : ""}>`;
+        },
+      );
+
+      const attributes = explicitRow ? rowAttributes : `${rowAttributes} r="${rowNumber}"`;
+      return `<${rowTag}${attributes}>${repairedContent}</${rowTag}>`;
+    },
+  );
+
+  if (/<(?:[A-Za-z_][\w.-]*:)?dimension\b/.test(repaired) || !maxRow || !maxColumn) {
+    return repaired;
+  }
+
+  return repaired.replace(
+    /<((?:[A-Za-z_][\w.-]*:)?worksheet)\b([^>]*)>/,
+    (worksheetXml, worksheetTag: string) => {
+      const prefix = worksheetTag.includes(":") ? `${worksheetTag.split(":")[0]}:` : "";
+      return `${worksheetXml}<${prefix}dimension ref="A1:${excelColumnName(maxColumn - 1)}${maxRow}" />`;
+    },
+  );
+}
+
+export function repairXlsxCellReferences(buffer: ArrayBuffer): Uint8Array {
+  const files = unzipSync(new Uint8Array(buffer));
+  for (const [path, contents] of Object.entries(files)) {
+    if (!/^xl\/worksheets\/[^/]+\.xml$/i.test(path)) continue;
+    files[path] = strToU8(repairWorksheetXmlReferences(strFromU8(contents)));
+  }
+  return zipSync(files);
+}
+
 const HEADER_ALIASES = {
   documento: ["cpfcnpj", "documento", "cpf", "cnpj"],
   empresa: ["empresa", "cliente", "razaosocial"],
@@ -17,14 +91,7 @@ const HEADER_ALIASES = {
   email: ["email", "correioeletronico"],
   telefone1: ["telefone1", "fone1", "celular1"],
   telefone2: ["telefone2", "fone2", "celular2"],
-  telefone3: [
-    "whatsapp",
-    "numerowhatsapp",
-    "telefonewhatsapp",
-    "telefone3",
-    "fone3",
-    "celular3",
-  ],
+  telefone3: ["whatsapp", "numerowhatsapp", "telefonewhatsapp", "telefone3", "fone3", "celular3"],
 } as const;
 
 function normalizeHeader(value: CellValue): string {
@@ -195,7 +262,16 @@ export async function parseBaseFile(file: File): Promise<ParsedBaseFile> {
 
   if (extension === "xlsx") {
     const { readSheet } = await import("read-excel-file/browser");
-    const matrix = (await readSheet(file)) as unknown as CellValue[][];
+    let matrix: CellValue[][];
+    try {
+      matrix = (await readSheet(file)) as unknown as CellValue[][];
+    } catch {
+      const repaired = repairXlsxCellReferences(await file.arrayBuffer());
+      const repairedBuffer = new ArrayBuffer(repaired.byteLength);
+      new Uint8Array(repairedBuffer).set(repaired);
+      const repairedFile = new File([repairedBuffer], file.name, { type: file.type });
+      matrix = (await readSheet(repairedFile)) as unknown as CellValue[][];
+    }
     const parsed = parseBaseMatrix(matrix);
     return { ...parsed, format: "xlsx" };
   }
