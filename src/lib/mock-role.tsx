@@ -37,12 +37,24 @@ function legacyPermissions(role: Role): PermissionMap {
       "dispatch.update": "own",
       "dispatch.inactivate": "own",
       "dispatch.export": "own",
+      "churn.view": "own",
+      "churn.import": "own",
+      "churn.process": "own",
+      "churn.update": "own",
+      "churn.inactivate": "own",
+      "churn.export": "own",
     } as PermissionMap;
   }
   if (role === "coordenador") {
     return {
       ...Object.fromEntries(OPERATIONAL_PERMISSIONS.map((code) => [code, "all"])),
       "audit.view": "all",
+      "churn.view": "all",
+      "churn.import": "all",
+      "churn.process": "all",
+      "churn.update": "all",
+      "churn.inactivate": "all",
+      "churn.export": "all",
     } as PermissionMap;
   }
   return {
@@ -54,6 +66,12 @@ function legacyPermissions(role: Role): PermissionMap {
         "dispatch.update",
         "dispatch.inactivate",
         "dispatch.export",
+        "churn.view",
+        "churn.import",
+        "churn.process",
+        "churn.update",
+        "churn.inactivate",
+        "churn.export",
         "audit.view",
         "administration.view",
         "administration.users.manage",

@@ -12,6 +12,7 @@ import {
   LineChart,
   ScrollText,
   Settings2,
+  TrendingDown,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -74,6 +75,13 @@ const RELATIONSHIP_ITEMS: Item[] = [
     icon: FileSpreadsheet,
     roles: ["analista_processos", "administrador"],
     permission: "dispatch.view",
+  },
+  {
+    title: "Monitor de Churn",
+    url: "/churn",
+    icon: TrendingDown,
+    roles: ["analista_processos", "coordenador", "administrador"],
+    permission: "churn.view",
   },
 ];
 
