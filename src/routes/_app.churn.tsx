@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Download,
   FileSpreadsheet,
   Loader2,
   Search,
@@ -17,6 +19,17 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { ForbiddenState } from "@/components/state-views";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -32,6 +45,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { buildConsolidatedChurnCsv } from "@/lib/churn-export";
 import {
   parseChurnDetailFile,
   parseChurnSummaryFile,
@@ -169,6 +183,7 @@ function ChurnPage() {
   const [details, setDetails] = useState<DetailPreview[]>([]);
   const [reading, setReading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [inactivating, setInactivating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [selectedImportId, setSelectedImportId] = useState("");
   const [macroFilter, setMacroFilter] = useState("all");
@@ -178,6 +193,8 @@ function ChurnPage() {
     ? hasPermission("churn.view")
     : role === "analista_processos" || role === "coordenador" || role === "administrador";
   const canImport = rbacEnabled ? hasPermission("churn.import") : canAccess;
+  const canExport = rbacEnabled ? hasPermission("churn.export") : canAccess;
+  const canInactivate = rbacEnabled ? hasPermission("churn.inactivate") : canAccess;
 
   const importsQuery = useQuery({
     queryKey: ["churn-imports", user.id],
@@ -433,6 +450,44 @@ function ChurnPage() {
     }
   };
 
+  const exportConsolidatedCsv = () => {
+    if (!canExport || !selectedImportId || !filteredClients.length) return;
+    const selectedImport = importsQuery.data?.find((item) => item.id === selectedImportId);
+    const competenceLabel = selectedImport?.competencia.slice(0, 7) ?? "competencia";
+    const csv = buildConsolidatedChurnCsv(filteredClients);
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `churn-consolidado-${competenceLabel}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${filteredClients.length} cliente(s) exportado(s)`);
+  };
+
+  const inactivateImport = async () => {
+    if (!canInactivate || !selectedImportId) return;
+    setInactivating(true);
+    try {
+      const { error } = await supabase
+        .from("churn_imports")
+        .update({ ativo: false })
+        .eq("id", selectedImportId);
+      if (error) throw error;
+      setSelectedImportId("");
+      setMacroFilter("all");
+      setClientSearch("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["churn-imports"] }),
+        queryClient.removeQueries({ queryKey: ["churn-dashboard", selectedImportId] }),
+      ]);
+      toast.success("Importação inativada e registrada na auditoria");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível inativar a importação");
+    } finally {
+      setInactivating(false);
+    }
+  };
+
   const scope = rbacEnabled ? permissionScope("churn.view") : role === "analista_processos" ? "own" : "all";
 
   return (
@@ -447,7 +502,7 @@ function ChurnPage() {
                 <CardTitle>Visão gerencial</CardTitle>
                 <CardDescription>Valores e clientes da competência selecionada, sem percentuais ou filtros do BI.</CardDescription>
               </div>
-              <div className="w-full space-y-2 md:w-72">
+              <div className="w-full space-y-3 md:w-80">
                 <Label htmlFor="churn-import-select">Competência importada</Label>
                 <Select value={selectedImportId} onValueChange={setSelectedImportId}>
                   <SelectTrigger id="churn-import-select"><SelectValue placeholder="Selecione uma importação" /></SelectTrigger>
@@ -460,6 +515,32 @@ function ChurnPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="flex flex-wrap justify-end gap-2">
+                  {canExport && (
+                    <Button variant="outline" size="sm" onClick={exportConsolidatedCsv} disabled={!filteredClients.length || dashboardQuery.isLoading}>
+                      <Download className="mr-2 h-4 w-4" />Exportar CSV
+                    </Button>
+                  )}
+                  {canInactivate && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" disabled={!selectedImportId || inactivating}>
+                          <Trash2 className="mr-2 h-4 w-4" />Inativar
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Inativar esta importação?</AlertDialogTitle>
+                          <AlertDialogDescription>Ela deixará de aparecer no Monitor de Churn, mas os dados serão preservados e a ação ficará registrada na auditoria.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={inactivateImport} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Confirmar inativação</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               </div>
             </CardHeader>
           </Card>
