@@ -7,7 +7,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "test": "node --experimental-strip-types --test src/lib/base-processing.test.ts src/lib/base-file-parser.test.ts src/lib/base-export.test.ts src/lib/churn-file-parser.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/base-processing.test.ts src/lib/base-file-parser.test.ts src/lib/base-export.test.ts src/lib/churn-file-parser.test.ts src/lib/churn-export.test.ts",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
