@@ -48,7 +48,7 @@ const RELATIONSHIP_ITEMS: Item[] = [
     permission: "pitstop.monitor.view",
   },
   {
-    title: "Cadastro PitStop",
+    title: "Cadastro - PitStop",
     url: "/gargalos",
     icon: AlertOctagon,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
@@ -62,7 +62,7 @@ const RELATIONSHIP_ITEMS: Item[] = [
     permission: "carteira.monitor.view",
   },
   {
-    title: "Cadastro Neo",
+    title: "Cadastro - Neo",
     url: "/neo/registros",
     icon: ClipboardList,
     roles: ["analista", "analista_processos", "coordenador", "administrador"],
