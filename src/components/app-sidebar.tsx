@@ -119,6 +119,8 @@ export function AppSidebar() {
   const relationshipItems = RELATIONSHIP_ITEMS.filter(canSee);
   const generalItems = GENERAL_ITEMS.filter(canSee);
   const relationshipActive = relationshipItems.some((item) => isActive(item.url));
+  const canViewRelationship = !rbacEnabled || hasPermission("relationship.view");
+  const canViewSupport = !rbacEnabled || hasPermission("technical_support.view");
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -145,66 +147,70 @@ export function AppSidebar() {
           {!collapsed && <SidebarGroupLabel>Navegação</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
-              <Collapsible
-                asChild
-                open={relationshipOpen}
-                onOpenChange={setRelationshipOpen}
-                className="group/collapsible"
-              >
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      isActive={relationshipActive}
-                      tooltip="Relacionamento"
-                      className="data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
-                    >
-                      <Handshake className="h-4 w-4" />
-                      <span>Relacionamento</span>
-                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {relationshipItems.map((item) => (
-                        <SidebarMenuSubItem key={item.url}>
-                          <SidebarMenuSubButton
-                            asChild
-                            isActive={isActive(item.url)}
-                            className="data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
-                          >
-                            <Link to={item.url}>
-                              <item.icon className="h-4 w-4" />
-                              <span>{item.title}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
+              {canViewRelationship && relationshipItems.length > 0 && (
+                <Collapsible
+                  asChild
+                  open={relationshipOpen}
+                  onOpenChange={setRelationshipOpen}
+                  className="group/collapsible"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        isActive={relationshipActive}
+                        tooltip="Relacionamento"
+                        className="data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
+                      >
+                        <Handshake className="h-4 w-4" />
+                        <span>Relacionamento</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {relationshipItems.map((item) => (
+                          <SidebarMenuSubItem key={item.url}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={isActive(item.url)}
+                              className="data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary"
+                            >
+                              <Link to={item.url}>
+                                <item.icon className="h-4 w-4" />
+                                <span>{item.title}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              )}
 
-              <Collapsible
-                asChild
-                open={supportOpen}
-                onOpenChange={setSupportOpen}
-                className="group/support-collapsible"
-              >
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip="Suporte Técnico">
-                      <Headset className="h-4 w-4" />
-                      <span>Suporte Técnico</span>
-                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/support-collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="px-9 py-1 text-xs text-muted-foreground">
-                      Nenhuma rotina disponível
-                    </div>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
+              {canViewSupport && (
+                <Collapsible
+                  asChild
+                  open={supportOpen}
+                  onOpenChange={setSupportOpen}
+                  className="group/support-collapsible"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip="Suporte Técnico">
+                        <Headset className="h-4 w-4" />
+                        <span>Suporte Técnico</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/support-collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="px-9 py-1 text-xs text-muted-foreground">
+                        Nenhuma rotina disponível
+                      </div>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              )}
 
               {generalItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
