@@ -197,6 +197,7 @@ function ChurnPage() {
   const [macroFilter, setMacroFilter] = useState("all");
   const [unitFilter, setUnitFilter] = useState("all");
   const [clientSearch, setClientSearch] = useState("");
+  const [clientPageSize, setClientPageSize] = useState(50);
   const [clientPage, setClientPage] = useState(0);
   const canAccess = rbacEnabled
     ? hasPermission("churn.view")
@@ -272,13 +273,12 @@ function ChurnPage() {
       return matchesMacro && matchesUnit && matchesSearch;
     });
   }, [clientSearch, consolidatedClients, macroFilter, unitFilter]);
-  const clientPageSize = 50;
   const clientPageCount = Math.max(1, Math.ceil(filteredClients.length / clientPageSize));
   const visibleClients = filteredClients.slice(clientPage * clientPageSize, (clientPage + 1) * clientPageSize);
 
   useEffect(() => {
     setClientPage(0);
-  }, [clientSearch, macroFilter, selectedImportId, unitFilter]);
+  }, [clientPageSize, clientSearch, macroFilter, selectedImportId, unitFilter]);
 
   const syncCompetenceFromInput = () => {
     const currentValue = competenceInput.current?.value;
@@ -578,11 +578,10 @@ function ChurnPage() {
           )}
           {dashboardQuery.data && (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {[
                   ["Churn total", formatCurrency(dashboardQuery.data.summary.reduce((total, row) => total + Number(row.churn_value), 0))],
                   ["Clientes únicos", consolidatedClients.length],
-                  ["Serviços cancelados", dashboardQuery.data.records.length],
                   ["Macromotivos", dashboardQuery.data.summary.length],
                 ].map(([label, value]) => (
                   <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></CardContent></Card>
@@ -635,9 +634,18 @@ function ChurnPage() {
                       </TableBody>
                     </Table>
                   </div>
-                  <div className="mt-4 flex items-center justify-between border-t pt-4 text-sm text-muted-foreground">
+                  <div className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
                     <span>{filteredClients.length} cliente(s)</span>
-                    <div className="flex items-center gap-2"><Button variant="outline" size="icon" disabled={clientPage === 0} onClick={() => setClientPage((page) => page - 1)}><ChevronLeft className="h-4 w-4" /><span className="sr-only">Página anterior</span></Button><span>Página {clientPage + 1} de {clientPageCount}</span><Button variant="outline" size="icon" disabled={clientPage + 1 >= clientPageCount} onClick={() => setClientPage((page) => page + 1)}><ChevronRight className="h-4 w-4" /><span className="sr-only">Próxima página</span></Button></div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>Registros por página</span>
+                      <Select value={String(clientPageSize)} onValueChange={(value) => setClientPageSize(Number(value))}>
+                        <SelectTrigger className="h-9 w-20" aria-label="Registros por página"><SelectValue /></SelectTrigger>
+                        <SelectContent>{[10, 20, 50, 100].map((size) => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Button variant="outline" size="icon" disabled={clientPage === 0} onClick={() => setClientPage((page) => page - 1)}><ChevronLeft className="h-4 w-4" /><span className="sr-only">Página anterior</span></Button>
+                      <span>Página {clientPage + 1} de {clientPageCount}</span>
+                      <Button variant="outline" size="icon" disabled={clientPage + 1 >= clientPageCount} onClick={() => setClientPage((page) => page + 1)}><ChevronRight className="h-4 w-4" /><span className="sr-only">Próxima página</span></Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
