@@ -189,7 +189,7 @@ export function DashboardGargalos() {
   return (
     <>
       <PageHeader
-        title="Monitor\u00A0 PitStop"
+        title="Monitor - PitStop"
         description={
           isAnalyst
             ? "Acompanhamento dos seus gargalos de Customer Success."
