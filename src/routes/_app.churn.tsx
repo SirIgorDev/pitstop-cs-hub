@@ -83,6 +83,7 @@ type ConsolidatedClient = {
   unitName: string;
   unitNames: string[];
   macroReasons: string[];
+  churnTypes: string[];
   services: string[];
   cancellationReasons: string[];
   cancellationValue: number;
@@ -142,6 +143,17 @@ function MultiSelectFilter({ label, options, selected, onChange }: MultiSelectFi
   );
 }
 
+function ChurnTypeBadges({ types }: { types: string[] }) {
+  if (!types.length) return <span className="text-xs text-muted-foreground">Não informado</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {types.map((type) => (
+        <Badge key={type} variant={type === "Churn" ? "destructive" : "secondary"}>{type}</Badge>
+      ))}
+    </div>
+  );
+}
+
 const churnChartConfig = {
   valor: { label: "Churn", color: "var(--primary)" },
 } satisfies ChartConfig;
@@ -171,6 +183,7 @@ function consolidateClients(records: ChurnRecord[]): ConsolidatedClient[] {
   const clients = new Map<string, ConsolidatedClient & {
     unitNameSet: Set<string>;
     macroReasonSet: Set<string>;
+    churnTypeSet: Set<string>;
     serviceSet: Set<string>;
     cancellationReasonSet: Set<string>;
   }>();
@@ -183,17 +196,20 @@ function consolidateClients(records: ChurnRecord[]): ConsolidatedClient[] {
       unitName: row.unit_name ?? "",
       unitNames: [],
       macroReasons: [],
+      churnTypes: [],
       services: [],
       cancellationReasons: [],
       cancellationValue: 0,
       cancellationDate: row.cancellation_date,
       unitNameSet: new Set<string>(),
       macroReasonSet: new Set<string>(),
+      churnTypeSet: new Set<string>(),
       serviceSet: new Set<string>(),
       cancellationReasonSet: new Set<string>(),
     };
     if (row.unit_name) current.unitNameSet.add(row.unit_name);
     current.macroReasonSet.add(row.macro_reason);
+    if (row.churn_type) current.churnTypeSet.add(row.churn_type);
     if (row.service_product) current.serviceSet.add(row.service_product);
     if (row.cancellation_reason) current.cancellationReasonSet.add(row.cancellation_reason);
     current.cancellationValue += Number(row.cancellation_value) || 0;
@@ -204,11 +220,12 @@ function consolidateClients(records: ChurnRecord[]): ConsolidatedClient[] {
   }
 
   return [...clients.values()]
-    .map(({ unitNameSet, macroReasonSet, serviceSet, cancellationReasonSet, ...client }) => ({
+    .map(({ unitNameSet, macroReasonSet, churnTypeSet, serviceSet, cancellationReasonSet, ...client }) => ({
       ...client,
       unitNames: [...unitNameSet].sort(),
       unitName: [...unitNameSet].sort().join(" | "),
       macroReasons: [...macroReasonSet].sort(),
+      churnTypes: [...churnTypeSet].sort(),
       services: [...serviceSet].sort(),
       cancellationReasons: [...cancellationReasonSet].sort(),
     }))
@@ -255,7 +272,7 @@ function ChurnPage() {
   const [selectedMacroReasons, setSelectedMacroReasons] = useState<string[]>([]);
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
   const [clientSearch, setClientSearch] = useState("");
-  const [clientView, setClientView] = useState<"list" | "grouped">("list");
+  const [clientView, setClientView] = useState<"list" | "grouped">("grouped");
   const [clientPageSize, setClientPageSize] = useState(10);
   const [clientPage, setClientPage] = useState(0);
   const canAccess = rbacEnabled
@@ -706,18 +723,18 @@ function ChurnPage() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pt-3">
                     <span className="text-sm text-muted-foreground">Visualização:</span>
-                    <Button type="button" size="sm" variant={clientView === "list" ? "default" : "outline"} onClick={() => setClientView("list")}><List className="mr-2 h-4 w-4" />Lista de clientes</Button>
                     <Button type="button" size="sm" variant={clientView === "grouped" ? "default" : "outline"} onClick={() => setClientView("grouped")}><Rows3 className="mr-2 h-4 w-4" />Agrupar por motivo</Button>
+                    <Button type="button" size="sm" variant={clientView === "list" ? "default" : "outline"} onClick={() => setClientView("list")}><List className="mr-2 h-4 w-4" />Lista de clientes</Button>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {clientView === "list" ? <div className="overflow-x-auto">
-                    <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Macromotivo</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                    <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Macromotivo</TableHead><TableHead>Tipo</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
                       <TableBody>
                         {visibleClients.map((client) => (
-                          <TableRow key={client.clientId}><TableCell className="font-mono text-xs">{client.clientId}</TableCell><TableCell><p className="font-medium">{client.clientName}</p>{client.unitName && <p className="text-xs text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="flex max-w-64 flex-wrap gap-1">{client.macroReasons.map((reason) => <Badge key={reason} variant="outline">{reason}</Badge>)}</div></TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
+                          <TableRow key={client.clientId}><TableCell className="font-mono text-xs">{client.clientId}</TableCell><TableCell><p className="font-medium">{client.clientName}</p>{client.unitName && <p className="text-xs text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="flex max-w-64 flex-wrap gap-1">{client.macroReasons.map((reason) => <Badge key={reason} variant="outline">{reason}</Badge>)}</div></TableCell><TableCell><ChurnTypeBadges types={client.churnTypes} /></TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
                         ))}
-                        {!visibleClients.length && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>}
+                        {!visibleClients.length && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>}
                       </TableBody>
                     </Table>
                   </div> : (
@@ -729,9 +746,9 @@ function ChurnPage() {
                             <div className="flex items-center gap-3"><span className="font-medium">{formatCurrency(group.value)}</span><ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" /></div>
                           </summary>
                           <div className="overflow-x-auto border-t">
-                            <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                            <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Tipo</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
                               <TableBody>{group.clients.map((client) => (
-                                <TableRow key={`${group.reason}-${client.clientId}`}><TableCell className="font-mono text-xs">{client.clientId}</TableCell><TableCell><p className="font-medium">{client.clientName}</p>{client.unitName && <p className="text-xs text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
+                                <TableRow key={`${group.reason}-${client.clientId}`}><TableCell className="font-mono text-xs">{client.clientId}</TableCell><TableCell><p className="font-medium">{client.clientName}</p>{client.unitName && <p className="text-xs text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><ChurnTypeBadges types={client.churnTypes} /></TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
                               ))}</TableBody>
                             </Table>
                           </div>
