@@ -100,7 +100,7 @@ function MultiSelectFilter({ label, options, selected, onChange }: MultiSelectFi
   const selectedSet = new Set(selected);
   const allSelected = options.length > 0 && selected.length === options.length;
   const triggerLabel = selected.length === 0
-    ? `Todos os ${label.toLocaleLowerCase("pt-BR")}`
+    ? label === "Unidades" ? "Todas as unidades" : "Todos os macromotivos"
     : selected.length === 1
       ? selected[0]
       : `${selected.length} ${label.toLocaleLowerCase("pt-BR")} selecionados`;
