@@ -431,7 +431,7 @@ function ChurnPage() {
     return (
       <>
         <PageHeader title="Monitor - Churn" />
-        <ForbiddenState title="Área restrita" description="Seu cargo não possui permissão para visualizar o Monitor de Churn." />
+        <ForbiddenState title="Área restrita" description="Seu cargo não possui permissão para visualizar o Monitor - Churn." />
       </>
     );
   }
