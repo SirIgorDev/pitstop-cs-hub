@@ -197,7 +197,7 @@ function ChurnPage() {
   const [macroFilter, setMacroFilter] = useState("all");
   const [unitFilter, setUnitFilter] = useState("all");
   const [clientSearch, setClientSearch] = useState("");
-  const [clientPageSize, setClientPageSize] = useState(50);
+  const [clientPageSize, setClientPageSize] = useState(10);
   const [clientPage, setClientPage] = useState(0);
   const canAccess = rbacEnabled
     ? hasPermission("churn.view")
