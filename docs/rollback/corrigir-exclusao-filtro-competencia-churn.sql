@@ -8,8 +8,7 @@ REVOKE DELETE ON TABLE public.churn_imports FROM authenticated;
 
 UPDATE public.permissoes
 SET codigo = 'churn.inactivate',
-    acao = 'Inativar importacao',
-    updated_at = now()
+    acao = 'Inativar importacao'
 WHERE codigo = 'churn.delete';
 
 COMMIT;
