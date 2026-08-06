@@ -45,6 +45,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const ENTITY_LABELS: Record<string, string> = {
+  churn_imports: "Importação de Churn",
   process_imports: "Tratamento de Disparo",
   gargalos: "Gargalo",
   registros_neo: "Registro Neo",

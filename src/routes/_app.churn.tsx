@@ -76,6 +76,7 @@ type ConsolidatedClient = {
   clientId: string;
   clientName: string;
   unitName: string;
+  unitNames: string[];
   macroReasons: string[];
   services: string[];
   cancellationReasons: string[];
@@ -110,6 +111,7 @@ function formatCompetence(value: string, version: number) {
 
 function consolidateClients(records: ChurnRecord[]): ConsolidatedClient[] {
   const clients = new Map<string, ConsolidatedClient & {
+    unitNameSet: Set<string>;
     macroReasonSet: Set<string>;
     serviceSet: Set<string>;
     cancellationReasonSet: Set<string>;
@@ -121,15 +123,18 @@ function consolidateClients(records: ChurnRecord[]): ConsolidatedClient[] {
       clientId: row.client_id,
       clientName: row.client_name,
       unitName: row.unit_name ?? "",
+      unitNames: [],
       macroReasons: [],
       services: [],
       cancellationReasons: [],
       cancellationValue: 0,
       cancellationDate: row.cancellation_date,
+      unitNameSet: new Set<string>(),
       macroReasonSet: new Set<string>(),
       serviceSet: new Set<string>(),
       cancellationReasonSet: new Set<string>(),
     };
+    if (row.unit_name) current.unitNameSet.add(row.unit_name);
     current.macroReasonSet.add(row.macro_reason);
     if (row.service_product) current.serviceSet.add(row.service_product);
     if (row.cancellation_reason) current.cancellationReasonSet.add(row.cancellation_reason);
@@ -141,8 +146,10 @@ function consolidateClients(records: ChurnRecord[]): ConsolidatedClient[] {
   }
 
   return [...clients.values()]
-    .map(({ macroReasonSet, serviceSet, cancellationReasonSet, ...client }) => ({
+    .map(({ unitNameSet, macroReasonSet, serviceSet, cancellationReasonSet, ...client }) => ({
       ...client,
+      unitNames: [...unitNameSet].sort(),
+      unitName: [...unitNameSet].sort().join(" | "),
       macroReasons: [...macroReasonSet].sort(),
       services: [...serviceSet].sort(),
       cancellationReasons: [...cancellationReasonSet].sort(),
@@ -178,15 +185,17 @@ function ChurnPage() {
   const queryClient = useQueryClient();
   const summaryInput = useRef<HTMLInputElement>(null);
   const detailInput = useRef<HTMLInputElement>(null);
+  const competenceInput = useRef<HTMLInputElement>(null);
   const [competence, setCompetence] = useState(defaultCompetence);
   const [summary, setSummary] = useState<SummaryPreview | null>(null);
   const [details, setDetails] = useState<DetailPreview[]>([]);
   const [reading, setReading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [inactivating, setInactivating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [selectedImportId, setSelectedImportId] = useState("");
   const [macroFilter, setMacroFilter] = useState("all");
+  const [unitFilter, setUnitFilter] = useState("all");
   const [clientSearch, setClientSearch] = useState("");
   const [clientPage, setClientPage] = useState(0);
   const canAccess = rbacEnabled
@@ -194,7 +203,7 @@ function ChurnPage() {
     : role === "analista_processos" || role === "coordenador" || role === "administrador";
   const canImport = rbacEnabled ? hasPermission("churn.import") : canAccess;
   const canExport = rbacEnabled ? hasPermission("churn.export") : canAccess;
-  const canInactivate = rbacEnabled ? hasPermission("churn.inactivate") : canAccess;
+  const canDelete = rbacEnabled ? hasPermission("churn.delete") : canAccess;
 
   const importsQuery = useQuery({
     queryKey: ["churn-imports", user.id],
@@ -248,22 +257,34 @@ function ChurnPage() {
     () => consolidateClients(dashboardQuery.data?.records ?? []),
     [dashboardQuery.data?.records],
   );
+  const availableUnits = useMemo(
+    () => [...new Set(consolidatedClients.flatMap((client) => client.unitNames))]
+      .sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [consolidatedClients],
+  );
   const filteredClients = useMemo(() => {
     const search = clientSearch.trim().toLocaleLowerCase("pt-BR");
     return consolidatedClients.filter((client) => {
       const matchesMacro = macroFilter === "all" || client.macroReasons.includes(macroFilter);
-      const matchesSearch = !search || [client.clientId, client.clientName, client.unitName, ...client.services]
+      const matchesUnit = unitFilter === "all" || client.unitNames.includes(unitFilter);
+      const matchesSearch = !search || [client.clientId, client.clientName, ...client.unitNames, ...client.services]
         .some((value) => value.toLocaleLowerCase("pt-BR").includes(search));
-      return matchesMacro && matchesSearch;
+      return matchesMacro && matchesUnit && matchesSearch;
     });
-  }, [clientSearch, consolidatedClients, macroFilter]);
+  }, [clientSearch, consolidatedClients, macroFilter, unitFilter]);
   const clientPageSize = 50;
   const clientPageCount = Math.max(1, Math.ceil(filteredClients.length / clientPageSize));
   const visibleClients = filteredClients.slice(clientPage * clientPageSize, (clientPage + 1) * clientPageSize);
 
   useEffect(() => {
     setClientPage(0);
-  }, [clientSearch, macroFilter, selectedImportId]);
+  }, [clientSearch, macroFilter, selectedImportId, unitFilter]);
+
+  const syncCompetenceFromInput = () => {
+    const currentValue = competenceInput.current?.value;
+    if (currentValue && currentValue !== competence) setCompetence(currentValue);
+    return currentValue || competence;
+  };
 
   const summaryReasons = useMemo(
     () => new Set(summary?.parsed.rows.map((row) => normalizeReason(row.macroReason)) ?? []),
@@ -298,6 +319,7 @@ function ChurnPage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    syncCompetenceFromInput();
     setReading(true);
     try {
       const parsed = await parseChurnSummaryFile(file);
@@ -315,6 +337,7 @@ function ChurnPage() {
     const files = [...(event.target.files ?? [])];
     event.target.value = "";
     if (!files.length) return;
+    syncCompetenceFromInput();
     setReading(true);
     try {
       const parsed = await Promise.all(files.map(async (file) => ({ file, parsed: await parseChurnDetailFile(file) })));
@@ -340,7 +363,8 @@ function ChurnPage() {
     setProgress(5);
     let importId: string | null = null;
     try {
-      const competenceDate = `${competence}-01`;
+      const selectedCompetence = syncCompetenceFromInput();
+      const competenceDate = `${selectedCompetence}-01`;
       const { data: lastVersion, error: versionError } = await supabase
         .from("churn_imports")
         .select("versao")
@@ -464,27 +488,28 @@ function ChurnPage() {
     toast.success(`${filteredClients.length} cliente(s) exportado(s)`);
   };
 
-  const inactivateImport = async () => {
-    if (!canInactivate || !selectedImportId) return;
-    setInactivating(true);
+  const deleteImport = async () => {
+    if (!canDelete || !selectedImportId) return;
+    setDeleting(true);
     try {
       const { error } = await supabase
         .from("churn_imports")
-        .update({ ativo: false })
+        .delete()
         .eq("id", selectedImportId);
       if (error) throw error;
       setSelectedImportId("");
       setMacroFilter("all");
+      setUnitFilter("all");
       setClientSearch("");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["churn-imports"] }),
         queryClient.removeQueries({ queryKey: ["churn-dashboard", selectedImportId] }),
       ]);
-      toast.success("Importação inativada e registrada na auditoria");
+      toast.success("Importação excluída definitivamente e registrada na auditoria");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível inativar a importação");
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir a importação");
     } finally {
-      setInactivating(false);
+      setDeleting(false);
     }
   };
 
@@ -521,21 +546,21 @@ function ChurnPage() {
                       <Download className="mr-2 h-4 w-4" />Exportar CSV
                     </Button>
                   )}
-                  {canInactivate && (
+                  {canDelete && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" disabled={!selectedImportId || inactivating}>
-                          <Trash2 className="mr-2 h-4 w-4" />Inativar
+                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" disabled={!selectedImportId || deleting}>
+                          <Trash2 className="mr-2 h-4 w-4" />Excluir
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Inativar esta importação?</AlertDialogTitle>
-                          <AlertDialogDescription>Ela deixará de aparecer no Monitor de Churn, mas os dados serão preservados e a ação ficará registrada na auditoria.</AlertDialogDescription>
+                          <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Excluir definitivamente esta importação?</AlertDialogTitle>
+                          <AlertDialogDescription>Esta ação é irreversível. A importação e todos os seus arquivos, resumos e registros serão apagados. Somente o evento de exclusão permanecerá na auditoria.</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={inactivateImport} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Confirmar inativação</AlertDialogAction>
+                          <AlertDialogAction onClick={deleteImport} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir definitivamente</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
@@ -593,9 +618,10 @@ function ChurnPage() {
                 <CardHeader>
                   <CardTitle className="text-base">Clientes consolidados</CardTitle>
                   <CardDescription>Cada cliente aparece uma vez; todos os serviços cancelados permanecem visíveis.</CardDescription>
-                  <div className="grid gap-3 pt-3 md:grid-cols-[minmax(0,1fr)_280px]">
+                  <div className="grid gap-3 pt-3 md:grid-cols-[minmax(0,1fr)_240px_240px]">
                     <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={clientSearch} onChange={(event) => setClientSearch(event.target.value)} placeholder="Buscar cliente, ID, unidade ou serviço…" className="pl-9" /></div>
                     <Select value={macroFilter} onValueChange={setMacroFilter}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos os macromotivos</SelectItem>{dashboardQuery.data.summary.map((row) => <SelectItem key={row.id} value={row.macro_reason}>{row.macro_reason}</SelectItem>)}</SelectContent></Select>
+                    <Select value={unitFilter} onValueChange={setUnitFilter}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas as unidades</SelectItem>{availableUnits.map((unit) => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}</SelectContent></Select>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -629,7 +655,7 @@ function ChurnPage() {
           <CardContent className="space-y-5">
             <div className="max-w-xs space-y-2">
               <Label htmlFor="churn-competence">Competência</Label>
-              <Input id="churn-competence" type="month" value={competence} onChange={(event) => setCompetence(event.target.value)} disabled={saving} />
+              <Input ref={competenceInput} id="churn-competence" type="month" value={competence} onChange={(event) => setCompetence(event.target.value)} disabled={saving} />
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <button type="button" onClick={() => summaryInput.current?.click()} disabled={!canImport || reading || saving} className="rounded-lg border border-dashed p-6 text-left transition-colors hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50">
