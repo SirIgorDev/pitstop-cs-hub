@@ -69,7 +69,7 @@ import { useAuth } from "@/lib/mock-role";
 export const Route = createFileRoute("/_app/churn")({
   component: ChurnPage,
   head: () => ({
-    meta: [{ title: "Monitor de Churn — Controller CS" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "Monitor - Churn — Controller CS" }, { name: "robots", content: "noindex" }],
   }),
 });
 
@@ -430,7 +430,7 @@ function ChurnPage() {
   if (!canAccess) {
     return (
       <>
-        <PageHeader title="Monitor de Churn" />
+        <PageHeader title="Monitor - Churn" />
         <ForbiddenState title="Área restrita" description="Seu cargo não possui permissão para visualizar o Monitor de Churn." />
       </>
     );

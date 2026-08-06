@@ -77,7 +77,7 @@ const RELATIONSHIP_ITEMS: Item[] = [
     permission: "dispatch.view",
   },
   {
-    title: "Monitor de Churn",
+    title: "Monitor - Churn",
     url: "/churn",
     icon: TrendingDown,
     roles: ["analista_processos", "coordenador", "administrador"],
