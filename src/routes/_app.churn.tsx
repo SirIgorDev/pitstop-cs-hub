@@ -849,35 +849,38 @@ function ChurnPage() {
                     <h3 className="font-medium">Serviços e observações</h3>
                     <p className="text-sm text-muted-foreground">Cada linha preserva o detalhamento original do arquivo-filho.</p>
                   </div>
-                  <div className="overflow-x-auto rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Serviço/Produto</TableHead>
-                          <TableHead>Unidade</TableHead>
-                          <TableHead>Macromotivo</TableHead>
-                          <TableHead>Motivo</TableHead>
-                          <TableHead>Data</TableHead>
-                          <TableHead className="text-right">Valor da Perda</TableHead>
-                          <TableHead>Observação</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedClient.records.map((record) => (
-                          <TableRow key={record.id} className="[&>td]:align-middle">
-                            <TableCell><ChurnTypeBadges types={record.churn_type ? [record.churn_type] : []} /></TableCell>
-                            <TableCell className="min-w-52 font-medium">{record.service_product || "Não informado"}</TableCell>
-                            <TableCell className="min-w-36">{record.unit_name || "Não informada"}</TableCell>
-                            <TableCell className="min-w-52">{record.macro_reason}</TableCell>
-                            <TableCell className="min-w-48">{record.cancellation_reason || "Não informado"}</TableCell>
-                            <TableCell className="whitespace-nowrap">{formatDate(record.cancellation_date)}</TableCell>
-                            <TableCell className="whitespace-nowrap text-right font-medium">{formatCurrency(Number(record.cancellation_value) || 0)}</TableCell>
-                            <TableCell className="min-w-64 whitespace-pre-wrap text-sm">{record.observation || <span className="text-muted-foreground">Sem observação</span>}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-3">
+                    {selectedClient.records.map((record) => (
+                      <article key={record.id} className="overflow-hidden rounded-lg border bg-card">
+                        <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1.4fr)_minmax(120px,0.8fr)_minmax(180px,1fr)_auto]">
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Serviço/Produto</p>
+                            <p className="font-medium leading-5">{record.service_product || "Não informado"}</p>
+                            <ChurnTypeBadges types={record.churn_type ? [record.churn_type] : []} />
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Unidade</p>
+                            <p className="text-sm">{record.unit_name || "Não informada"}</p>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Motivo</p>
+                            <p className="text-sm">{record.cancellation_reason || "Não informado"}</p>
+                            <p className="text-xs text-muted-foreground">{record.macro_reason}</p>
+                          </div>
+                          <div className="space-y-2 lg:text-right">
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Data e valor da perda</p>
+                            <p className="whitespace-nowrap text-sm">{formatDate(record.cancellation_date)}</p>
+                            <p className="whitespace-nowrap font-semibold">{formatCurrency(Number(record.cancellation_value) || 0)}</p>
+                          </div>
+                        </div>
+                        <div className="border-t bg-muted/30 p-4">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Observação</p>
+                          <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                            {record.observation || <span className="italic text-muted-foreground">Sem observação</span>}
+                          </p>
+                        </div>
+                      </article>
+                    ))}
                   </div>
                 </div>
               </div>
