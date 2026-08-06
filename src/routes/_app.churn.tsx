@@ -103,7 +103,9 @@ function MultiSelectFilter({ label, options, selected, onChange }: MultiSelectFi
     ? label === "Unidades" ? "Todas as unidades" : "Todos os macromotivos"
     : selected.length === 1
       ? selected[0]
-      : `${selected.length} ${label.toLocaleLowerCase("pt-BR")} selecionados`;
+      : label === "Unidades"
+        ? `${selected.length} unidades selecionadas`
+        : `${selected.length} macromotivos selecionados`;
 
   const toggleOption = (option: string) => {
     onChange(selectedSet.has(option)
