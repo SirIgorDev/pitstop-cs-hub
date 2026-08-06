@@ -3,11 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
   FileSpreadsheet,
   Loader2,
+  List,
+  Rows3,
   Search,
   ShieldCheck,
   Trash2,
@@ -32,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ChartContainer,
   ChartTooltip,
@@ -40,6 +44,7 @@ import {
 } from "@/components/ui/chart";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -83,6 +88,57 @@ type ConsolidatedClient = {
   cancellationValue: number;
   cancellationDate: string | null;
 };
+
+type MultiSelectFilterProps = {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+};
+
+function MultiSelectFilter({ label, options, selected, onChange }: MultiSelectFilterProps) {
+  const selectedSet = new Set(selected);
+  const allSelected = options.length > 0 && selected.length === options.length;
+  const triggerLabel = selected.length === 0
+    ? `Todos os ${label.toLocaleLowerCase("pt-BR")}`
+    : selected.length === 1
+      ? selected[0]
+      : `${selected.length} ${label.toLocaleLowerCase("pt-BR")} selecionados`;
+
+  const toggleOption = (option: string) => {
+    onChange(selectedSet.has(option)
+      ? selected.filter((item) => item !== option)
+      : [...selected, option]);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="h-10 w-full justify-between px-3 font-normal" aria-label={`Filtrar por ${label.toLocaleLowerCase("pt-BR")}`}>
+          <span className="truncate">{triggerLabel}</span><ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 p-0">
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <span className="text-sm font-medium">{label}</span>
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => onChange([])} disabled={!selected.length}>Limpar</Button>
+        </div>
+        <label className="flex cursor-pointer items-center gap-2 border-b px-3 py-2 text-sm hover:bg-muted/50">
+          <Checkbox checked={allSelected} onCheckedChange={() => onChange(allSelected ? [] : [...options])} />
+          Selecionar todos
+        </label>
+        <div className="max-h-64 overflow-y-auto p-1">
+          {options.map((option) => (
+            <label key={option} className="flex cursor-pointer items-start gap-2 rounded-sm px-2 py-2 text-sm hover:bg-muted/50">
+              <Checkbox checked={selectedSet.has(option)} onCheckedChange={() => toggleOption(option)} />
+              <span>{option}</span>
+            </label>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const churnChartConfig = {
   valor: { label: "Churn", color: "var(--primary)" },
@@ -194,9 +250,10 @@ function ChurnPage() {
   const [deleting, setDeleting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [selectedImportId, setSelectedImportId] = useState("");
-  const [macroFilter, setMacroFilter] = useState("all");
-  const [unitFilter, setUnitFilter] = useState("all");
+  const [selectedMacroReasons, setSelectedMacroReasons] = useState<string[]>([]);
+  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
   const [clientSearch, setClientSearch] = useState("");
+  const [clientView, setClientView] = useState<"list" | "grouped">("list");
   const [clientPageSize, setClientPageSize] = useState(10);
   const [clientPage, setClientPage] = useState(0);
   const canAccess = rbacEnabled
@@ -266,19 +323,42 @@ function ChurnPage() {
   const filteredClients = useMemo(() => {
     const search = clientSearch.trim().toLocaleLowerCase("pt-BR");
     return consolidatedClients.filter((client) => {
-      const matchesMacro = macroFilter === "all" || client.macroReasons.includes(macroFilter);
-      const matchesUnit = unitFilter === "all" || client.unitNames.includes(unitFilter);
+      const matchesMacro = selectedMacroReasons.length === 0
+        || client.macroReasons.some((reason) => selectedMacroReasons.includes(reason));
+      const matchesUnit = selectedUnits.length === 0
+        || client.unitNames.some((unit) => selectedUnits.includes(unit));
       const matchesSearch = !search || [client.clientId, client.clientName, ...client.unitNames, ...client.services]
         .some((value) => value.toLocaleLowerCase("pt-BR").includes(search));
       return matchesMacro && matchesUnit && matchesSearch;
     });
-  }, [clientSearch, consolidatedClients, macroFilter, unitFilter]);
+  }, [clientSearch, consolidatedClients, selectedMacroReasons, selectedUnits]);
   const clientPageCount = Math.max(1, Math.ceil(filteredClients.length / clientPageSize));
   const visibleClients = filteredClients.slice(clientPage * clientPageSize, (clientPage + 1) * clientPageSize);
+  const groupedVisibleClients = useMemo(() => {
+    const groups = new Map<string, ConsolidatedClient[]>();
+    for (const client of visibleClients) {
+      const reasons = selectedMacroReasons.length
+        ? client.macroReasons.filter((reason) => selectedMacroReasons.includes(reason))
+        : client.macroReasons;
+      for (const reason of reasons) groups.set(reason, [...(groups.get(reason) ?? []), client]);
+    }
+    return [...groups.entries()]
+      .map(([reason, clients]) => ({
+        reason,
+        clients,
+        value: clients.reduce((total, client) => total + client.cancellationValue, 0),
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [selectedMacroReasons, visibleClients]);
 
   useEffect(() => {
     setClientPage(0);
-  }, [clientPageSize, clientSearch, macroFilter, selectedImportId, unitFilter]);
+  }, [clientPageSize, clientSearch, selectedImportId, selectedMacroReasons, selectedUnits]);
+
+  useEffect(() => {
+    setSelectedMacroReasons([]);
+    setSelectedUnits([]);
+  }, [selectedImportId]);
 
   const syncCompetenceFromInput = () => {
     const currentValue = competenceInput.current?.value;
@@ -617,14 +697,19 @@ function ChurnPage() {
                 <CardHeader>
                   <CardTitle className="text-base">Clientes consolidados</CardTitle>
                   <CardDescription>Cada cliente aparece uma vez; todos os serviços cancelados permanecem visíveis.</CardDescription>
-                  <div className="grid gap-3 pt-3 md:grid-cols-[minmax(0,1fr)_240px_240px]">
+                  <div className="grid gap-3 pt-3 md:grid-cols-[minmax(0,1fr)_260px_260px]">
                     <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={clientSearch} onChange={(event) => setClientSearch(event.target.value)} placeholder="Buscar cliente, ID, unidade ou serviço…" className="pl-9" /></div>
-                    <Select value={macroFilter} onValueChange={setMacroFilter}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos os macromotivos</SelectItem>{dashboardQuery.data.summary.map((row) => <SelectItem key={row.id} value={row.macro_reason}>{row.macro_reason}</SelectItem>)}</SelectContent></Select>
-                    <Select value={unitFilter} onValueChange={setUnitFilter}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas as unidades</SelectItem>{availableUnits.map((unit) => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}</SelectContent></Select>
+                    <MultiSelectFilter label="Macromotivos" options={dashboardQuery.data.summary.map((row) => row.macro_reason)} selected={selectedMacroReasons} onChange={setSelectedMacroReasons} />
+                    <MultiSelectFilter label="Unidades" options={availableUnits} selected={selectedUnits} onChange={setSelectedUnits} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-3">
+                    <span className="text-sm text-muted-foreground">Visualização:</span>
+                    <Button type="button" size="sm" variant={clientView === "list" ? "default" : "outline"} onClick={() => setClientView("list")}><List className="mr-2 h-4 w-4" />Lista de clientes</Button>
+                    <Button type="button" size="sm" variant={clientView === "grouped" ? "default" : "outline"} onClick={() => setClientView("grouped")}><Rows3 className="mr-2 h-4 w-4" />Agrupar por motivo</Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
+                  {clientView === "list" ? <div className="overflow-x-auto">
                     <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Macromotivo</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
                       <TableBody>
                         {visibleClients.map((client) => (
@@ -633,7 +718,26 @@ function ChurnPage() {
                         {!visibleClients.length && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>}
                       </TableBody>
                     </Table>
-                  </div>
+                  </div> : (
+                    <div className="space-y-3">
+                      {groupedVisibleClients.map((group) => (
+                        <details key={group.reason} open className="group rounded-lg border">
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40">
+                            <div><p className="font-medium">{group.reason}</p><p className="text-xs text-muted-foreground">{group.clients.length} cliente(s) nesta página</p></div>
+                            <div className="flex items-center gap-3"><span className="font-medium">{formatCurrency(group.value)}</span><ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" /></div>
+                          </summary>
+                          <div className="overflow-x-auto border-t">
+                            <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                              <TableBody>{group.clients.map((client) => (
+                                <TableRow key={`${group.reason}-${client.clientId}`}><TableCell className="font-mono text-xs">{client.clientId}</TableCell><TableCell><p className="font-medium">{client.clientName}</p>{client.unitName && <p className="text-xs text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
+                              ))}</TableBody>
+                            </Table>
+                          </div>
+                        </details>
+                      ))}
+                      {!groupedVisibleClients.length && <div className="py-10 text-center text-sm text-muted-foreground">Nenhum cliente encontrado.</div>}
+                    </div>
+                  )}
                   <div className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
                     <span>{filteredClients.length} cliente(s)</span>
                     <div className="flex flex-wrap items-center gap-2">
