@@ -619,8 +619,8 @@ function ChurnPage() {
         .eq("id", selectedImportId);
       if (error) throw error;
       setSelectedImportId("");
-      setMacroFilter("all");
-      setUnitFilter("all");
+      setSelectedMacroReasons([]);
+      setSelectedUnits([]);
       setClientSearch("");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["churn-imports"] }),
