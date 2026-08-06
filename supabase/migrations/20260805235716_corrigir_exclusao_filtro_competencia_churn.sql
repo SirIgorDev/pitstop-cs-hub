@@ -3,8 +3,7 @@
 
 UPDATE public.permissoes
 SET codigo = 'churn.delete',
-    acao = 'Excluir importacao definitivamente',
-    updated_at = now()
+    acao = 'Excluir importacao definitivamente'
 WHERE codigo = 'churn.inactivate';
 
 GRANT DELETE ON TABLE public.churn_imports TO authenticated;
