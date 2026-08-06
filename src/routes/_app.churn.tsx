@@ -638,7 +638,7 @@ function ChurnPage() {
 
   return (
     <>
-      <PageHeader title="Monitor de Churn" description="Analise o churn por macromotivo e consulte cada cliente com seus serviços consolidados." />
+      <PageHeader title="Monitor - Churn" description="Analise o churn por macromotivo e consulte cada cliente com seus serviços consolidados." />
 
       {!!importsQuery.data?.length && (
         <div className="mb-6 space-y-6">
