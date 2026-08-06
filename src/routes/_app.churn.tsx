@@ -148,7 +148,13 @@ function ChurnTypeBadges({ types }: { types: string[] }) {
   return (
     <div className="flex flex-wrap gap-1">
       {types.map((type) => (
-        <Badge key={type} variant={type === "Churn" ? "destructive" : "secondary"}>{type}</Badge>
+        <Badge
+          key={type}
+          variant={type === "Churn" ? "destructive" : "outline"}
+          className={type === "Downgrade" ? "border-orange-500/50 bg-orange-500/15 text-orange-700 dark:text-orange-300" : undefined}
+        >
+          {type}
+        </Badge>
       ))}
     </div>
   );
@@ -729,10 +735,10 @@ function ChurnPage() {
                 </CardHeader>
                 <CardContent>
                   {clientView === "list" ? <div className="overflow-x-auto">
-                    <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Macromotivo</TableHead><TableHead>Tipo</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                    <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead className="w-32">Tipo</TableHead><TableHead>Cliente</TableHead><TableHead>Macromotivo</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
                       <TableBody>
                         {visibleClients.map((client) => (
-                          <TableRow key={client.clientId}><TableCell className="font-mono text-xs">{client.clientId}</TableCell><TableCell><p className="font-medium">{client.clientName}</p>{client.unitName && <p className="text-xs text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="flex max-w-64 flex-wrap gap-1">{client.macroReasons.map((reason) => <Badge key={reason} variant="outline">{reason}</Badge>)}</div></TableCell><TableCell><ChurnTypeBadges types={client.churnTypes} /></TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
+                          <TableRow key={client.clientId}><TableCell className="font-mono text-xs">{client.clientId}</TableCell><TableCell className="align-top"><ChurnTypeBadges types={client.churnTypes} /></TableCell><TableCell className="min-w-56 align-top"><p className="font-medium">{client.clientName}</p>{client.unitName && <p className="text-xs text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="flex max-w-64 flex-wrap gap-1">{client.macroReasons.map((reason) => <Badge key={reason} variant="outline">{reason}</Badge>)}</div></TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
                         ))}
                         {!visibleClients.length && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>}
                       </TableBody>
@@ -746,9 +752,9 @@ function ChurnPage() {
                             <div className="flex items-center gap-3"><span className="font-medium">{formatCurrency(group.value)}</span><ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" /></div>
                           </summary>
                           <div className="overflow-x-auto border-t">
-                            <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Tipo</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                            <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead className="w-32">Tipo</TableHead><TableHead>Cliente</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
                               <TableBody>{group.clients.map((client) => (
-                                <TableRow key={`${group.reason}-${client.clientId}`}><TableCell className="font-mono text-xs">{client.clientId}</TableCell><TableCell><p className="font-medium">{client.clientName}</p>{client.unitName && <p className="text-xs text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><ChurnTypeBadges types={client.churnTypes} /></TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
+                                <TableRow key={`${group.reason}-${client.clientId}`}><TableCell className="font-mono text-xs">{client.clientId}</TableCell><TableCell className="align-top"><ChurnTypeBadges types={client.churnTypes} /></TableCell><TableCell className="min-w-56 align-top"><p className="font-medium">{client.clientName}</p>{client.unitName && <p className="text-xs text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
                               ))}</TableBody>
                             </Table>
                           </div>
