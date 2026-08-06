@@ -297,14 +297,6 @@ function ChurnPage() {
   const [clientPageSize, setClientPageSize] = useState(10);
   const [clientPage, setClientPage] = useState(0);
   const [selectedClient, setSelectedClient] = useState<ConsolidatedClient | null>(null);
-  const selectedClientObservations = useMemo(() => {
-    if (!selectedClient) return [];
-    return Array.from(new Set(
-      selectedClient.records
-        .map((record) => record.observation?.trim())
-        .filter((observation): observation is string => Boolean(observation)),
-    ));
-  }, [selectedClient]);
   const canAccess = rbacEnabled
     ? hasPermission("churn.view")
     : role === "analista_processos" || role === "coordenador" || role === "administrador";
@@ -859,7 +851,7 @@ function ChurnPage() {
                   </div>
                   <div className="space-y-3">
                     {selectedClient.records.map((record) => (
-                      <article key={record.id} className="rounded-lg border bg-card">
+                      <article key={record.id} className="overflow-hidden rounded-lg border bg-card">
                         <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1.4fr)_minmax(120px,0.8fr)_minmax(180px,1fr)_auto]">
                           <div className="space-y-2">
                             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Serviço/Produto</p>
@@ -881,21 +873,14 @@ function ChurnPage() {
                             <p className="whitespace-nowrap font-semibold">{formatCurrency(Number(record.cancellation_value) || 0)}</p>
                           </div>
                         </div>
+                        <div className="border-t bg-muted/30 p-4">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Observação</p>
+                          <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                            {record.observation || <span className="italic text-muted-foreground">Sem observação</span>}
+                          </p>
+                        </div>
                       </article>
                     ))}
-                  </div>
-                  <div className="rounded-lg border bg-muted/30 p-5">
-                    <h3 className="font-medium">Observações do cliente</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Informações consolidadas dos arquivos de detalhamento.</p>
-                    {selectedClientObservations.length ? (
-                      <div className="mt-4 space-y-3">
-                        {selectedClientObservations.map((observation) => (
-                          <p key={observation} className="whitespace-pre-wrap break-words text-sm leading-6">{observation}</p>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-4 text-sm italic text-muted-foreground">Sem observação</p>
-                    )}
                   </div>
                 </div>
               </div>
