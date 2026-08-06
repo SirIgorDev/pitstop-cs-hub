@@ -44,6 +44,13 @@ import {
 } from "@/components/ui/chart";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -88,6 +95,7 @@ type ConsolidatedClient = {
   cancellationReasons: string[];
   cancellationValue: number;
   cancellationDate: string | null;
+  records: ChurnRecord[];
 };
 
 type MultiSelectFilterProps = {
@@ -177,6 +185,11 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+function formatDate(value: string | null) {
+  if (!value) return "Não informada";
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+}
+
 function formatCompetence(value: string, version: number) {
   const [year, month] = value.split("-").map(Number);
   const label = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
@@ -207,6 +220,7 @@ function consolidateClients(records: ChurnRecord[]): ConsolidatedClient[] {
       cancellationReasons: [],
       cancellationValue: 0,
       cancellationDate: row.cancellation_date,
+      records: [],
       unitNameSet: new Set<string>(),
       macroReasonSet: new Set<string>(),
       churnTypeSet: new Set<string>(),
@@ -218,6 +232,7 @@ function consolidateClients(records: ChurnRecord[]): ConsolidatedClient[] {
     if (row.churn_type) current.churnTypeSet.add(row.churn_type);
     if (row.service_product) current.serviceSet.add(row.service_product);
     if (row.cancellation_reason) current.cancellationReasonSet.add(row.cancellation_reason);
+    current.records.push(row);
     current.cancellationValue += Number(row.cancellation_value) || 0;
     if (row.cancellation_date && (!current.cancellationDate || row.cancellation_date > current.cancellationDate)) {
       current.cancellationDate = row.cancellation_date;
@@ -281,6 +296,7 @@ function ChurnPage() {
   const [clientView, setClientView] = useState<"list" | "grouped">("grouped");
   const [clientPageSize, setClientPageSize] = useState(10);
   const [clientPage, setClientPage] = useState(0);
+  const [selectedClient, setSelectedClient] = useState<ConsolidatedClient | null>(null);
   const canAccess = rbacEnabled
     ? hasPermission("churn.view")
     : role === "analista_processos" || role === "coordenador" || role === "administrador";
@@ -738,7 +754,7 @@ function ChurnPage() {
                     <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead className="w-32">Tipo</TableHead><TableHead>Cliente</TableHead><TableHead>Macromotivo</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor da Perda</TableHead></TableRow></TableHeader>
                       <TableBody>
                         {visibleClients.map((client) => (
-                          <TableRow key={client.clientId} className="[&>td]:align-middle [&>td]:py-3"><TableCell className="font-mono text-xs leading-5">{client.clientId}</TableCell><TableCell><ChurnTypeBadges types={client.churnTypes} /></TableCell><TableCell className="min-w-56"><p className="font-medium leading-5">{client.clientName}</p>{client.unitName && <p className="text-xs leading-5 text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="flex max-w-64 flex-wrap gap-1">{client.macroReasons.map((reason) => <Badge key={reason} variant="outline">{reason}</Badge>)}</div></TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium leading-5">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
+                          <TableRow key={client.clientId} className="[&>td]:align-middle [&>td]:py-3"><TableCell className="font-mono text-xs leading-5">{client.clientId}</TableCell><TableCell><ChurnTypeBadges types={client.churnTypes} /></TableCell><TableCell className="min-w-56"><button type="button" onClick={() => setSelectedClient(client)} className="text-left font-medium leading-5 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Ver detalhes de ${client.clientName}`}>{client.clientName}</button>{client.unitName && <p className="text-xs leading-5 text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="flex max-w-64 flex-wrap gap-1">{client.macroReasons.map((reason) => <Badge key={reason} variant="outline">{reason}</Badge>)}</div></TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium leading-5">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
                         ))}
                         {!visibleClients.length && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>}
                       </TableBody>
@@ -754,7 +770,7 @@ function ChurnPage() {
                           <div className="overflow-x-auto border-t">
                             <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead className="w-32">Tipo</TableHead><TableHead>Cliente</TableHead><TableHead>Serviços</TableHead><TableHead className="text-right">Valor da Perda</TableHead></TableRow></TableHeader>
                               <TableBody>{group.clients.map((client) => (
-                                <TableRow key={`${group.reason}-${client.clientId}`} className="[&>td]:align-middle [&>td]:py-3"><TableCell className="font-mono text-xs leading-5">{client.clientId}</TableCell><TableCell><ChurnTypeBadges types={client.churnTypes} /></TableCell><TableCell className="min-w-56"><p className="font-medium leading-5">{client.clientName}</p>{client.unitName && <p className="text-xs leading-5 text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium leading-5">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
+                                <TableRow key={`${group.reason}-${client.clientId}`} className="[&>td]:align-middle [&>td]:py-3"><TableCell className="font-mono text-xs leading-5">{client.clientId}</TableCell><TableCell><ChurnTypeBadges types={client.churnTypes} /></TableCell><TableCell className="min-w-56"><button type="button" onClick={() => setSelectedClient(client)} className="text-left font-medium leading-5 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Ver detalhes de ${client.clientName}`}>{client.clientName}</button>{client.unitName && <p className="text-xs leading-5 text-muted-foreground">{client.unitName}</p>}</TableCell><TableCell><div className="max-w-md space-y-1">{client.services.map((service) => <p key={service} className="text-sm">{service}</p>)}</div></TableCell><TableCell className="text-right font-medium leading-5">{formatCurrency(client.cancellationValue)}</TableCell></TableRow>
                               ))}</TableBody>
                             </Table>
                           </div>
@@ -782,6 +798,93 @@ function ChurnPage() {
           )}
         </div>
       )}
+
+      <Dialog open={Boolean(selectedClient)} onOpenChange={(open) => !open && setSelectedClient(null)}>
+        <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-6xl">
+          {selectedClient && (
+            <>
+              <DialogHeader className="border-b px-6 py-5 pr-12">
+                <DialogTitle>{selectedClient.clientName}</DialogTitle>
+                <DialogDescription>
+                  Cliente {selectedClient.clientId} · detalhamento consolidado da competência selecionada
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[calc(90vh-96px)] space-y-6 overflow-y-auto px-6 pb-6">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-lg border p-4">
+                    <p className="text-xs text-muted-foreground">Valor total da perda</p>
+                    <p className="mt-1 text-lg font-semibold">{formatCurrency(selectedClient.cancellationValue)}</p>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <p className="text-xs text-muted-foreground">Serviços detalhados</p>
+                    <p className="mt-1 text-lg font-semibold">{selectedClient.records.length}</p>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <p className="text-xs text-muted-foreground">Unidades</p>
+                    <p className="mt-1 text-lg font-semibold">{selectedClient.unitNames.length}</p>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <p className="text-xs text-muted-foreground">Data mais recente</p>
+                    <p className="mt-1 text-lg font-semibold">{formatDate(selectedClient.cancellationDate)}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Tipo</p>
+                    <ChurnTypeBadges types={selectedClient.churnTypes} />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Unidades</p>
+                    <div className="flex flex-wrap gap-1">{selectedClient.unitNames.map((unit) => <Badge key={unit} variant="outline">{unit}</Badge>)}</div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Macromotivos</p>
+                    <div className="flex flex-wrap gap-1">{selectedClient.macroReasons.map((reason) => <Badge key={reason} variant="outline">{reason}</Badge>)}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="font-medium">Serviços e observações</h3>
+                    <p className="text-sm text-muted-foreground">Cada linha preserva o detalhamento original do arquivo-filho.</p>
+                  </div>
+                  <div className="overflow-x-auto rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Serviço/Produto</TableHead>
+                          <TableHead>Unidade</TableHead>
+                          <TableHead>Macromotivo</TableHead>
+                          <TableHead>Motivo</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead className="text-right">Valor da Perda</TableHead>
+                          <TableHead>Observação</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedClient.records.map((record) => (
+                          <TableRow key={record.id} className="[&>td]:align-middle">
+                            <TableCell><ChurnTypeBadges types={record.churn_type ? [record.churn_type] : []} /></TableCell>
+                            <TableCell className="min-w-52 font-medium">{record.service_product || "Não informado"}</TableCell>
+                            <TableCell className="min-w-36">{record.unit_name || "Não informada"}</TableCell>
+                            <TableCell className="min-w-52">{record.macro_reason}</TableCell>
+                            <TableCell className="min-w-48">{record.cancellation_reason || "Não informado"}</TableCell>
+                            <TableCell className="whitespace-nowrap">{formatDate(record.cancellation_date)}</TableCell>
+                            <TableCell className="whitespace-nowrap text-right font-medium">{formatCurrency(Number(record.cancellation_value) || 0)}</TableCell>
+                            <TableCell className="min-w-64 whitespace-pre-wrap text-sm">{record.observation || <span className="text-muted-foreground">Sem observação</span>}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
